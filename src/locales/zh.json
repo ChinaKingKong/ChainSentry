@@ -126,6 +126,13 @@
     "maker": "地址",
     "txn": "交易",
     "txDisclaimer": "演示盘口 — 接入 Helius / DEX API 可显示真实成交。",
+    "poolActivity": "池合约近期签名",
+    "colSignature": "签名",
+    "colSlot": "Slot",
+    "linkSolscanTx": "在 Solscan 查看",
+    "poolActivityEmpty": "暂无该池的近期签名。",
+    "poolActivityLoading": "正在拉取链上签名…",
+    "poolActivityDisclaimer": "下列为流动性池（Pair）合约的近期链上签名，非逐笔解析的买卖明细。",
     "directSwap": "协议直连兑换",
     "youPay": "支付",
     "balance": "余额：—",
@@ -176,6 +183,9 @@
     "time2m": "2 分钟前",
     "time5m": "5 分钟前",
     "time12m": "12 分钟前",
+    "feedLive": "实时",
+    "badgeActive": "高活跃",
+    "badgeVolSurge": "量能突出",
     "flowSolAmount": "15,340 SOL",
     "flowUsdcAmount": "892,100 USDC",
     "flowSolLarge": "75,000 SOL",
@@ -275,7 +285,24 @@
     "score98": "98/100",
     "score84": "84/100",
     "score12": "12/100",
-    "score100": "100/100"
+    "score100": "100/100",
+    "analyze": "分析",
+    "analyzing": "扫描中…",
+    "preAnalyzeHint": "在上方输入 Mint 地址并点击「分析」，从链上读取铸币/冻结权限与持仓集中度。",
+    "metaEvidence": "Metaplex 元数据需链下或索引器核查，此处未自动拉取。",
+    "statusFailed": "未通过",
+    "meterModerate": "中等",
+    "meterPoor": "高风险",
+    "rugHeadingCritical": "极高风险",
+    "rugDescMintOpen": "铸币权限仍有效，发行人仍可增发。",
+    "rugHeadingWarn": "集中度偏高",
+    "rugDescConc": "前十大持仓约占 {{pct}}% 供应量。",
+    "rugDescSafe": "铸币权已关闭且持仓相对分散；请仍结合交易与流动性评估。",
+    "ownHeadingPartial": "部分解除",
+    "ownDescPartial": "冻结或铸币权限仍有一项存在，请查看检查表。",
+    "liqUnknown": "—",
+    "liqDescDex": "数据源：DexScreener · {{dex}}",
+    "taxSplStandard": "标准 SPL Mint 无合约内买卖税；链上未发现额外扣费逻辑（需结合具体程序验证）。"
   },
   "pages": {
     "whales": {
@@ -290,6 +317,11 @@
   "fab": {
     "scrollTop": "回到顶部",
     "focusRadar": "聚焦指挥台雷达"
+  },
+  "sentryErrors": {
+    "invalidMint": "请输入有效的 Solana 地址（Base58）。",
+    "notSplMint": "未找到标准 SPL Token Mint，或该地址为 Token-2022 / 非代币账户。",
+    "auditFailed": "链上查询失败，请稍后重试。"
   },
   "errors": {
     "rpcFailed": "RPC 请求失败",

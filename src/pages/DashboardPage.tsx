@@ -130,7 +130,7 @@ export function DashboardPage() {
         </div>
 
         <div className="space-y-8">
-          <SentimentHeatmap />
+          <SentimentHeatmap tokens={tokens} loading={loading} />
           <QuickSwapPanel />
         </div>
       </div>

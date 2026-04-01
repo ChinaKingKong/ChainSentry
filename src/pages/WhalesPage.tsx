@@ -1,50 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { MaterialIcon } from '../components/ui/MaterialIcon';
+import { useTokens } from '../hooks/useTokens';
+import { formatUsdCompact, shortenAddress } from '../lib/format';
 
 type AlertKind = 'inflow' | 'outflow' | 'critical';
 
-const ALERT_DEFS: {
-  kind: AlertKind;
-  icon: string;
-  iconFilled: boolean;
-  usdK: string;
-  badgeK: string;
-  walletK: string;
-  timeK: string;
-  flowK: string;
-}[] = [
-  {
-    kind: 'inflow',
-    icon: 'south_east',
-    iconFilled: true,
-    usdK: 'usd1',
-    badgeK: 'badgeMega',
-    walletK: 'wallet1',
-    timeK: 'time2m',
-    flowK: 'flowSolAmount',
-  },
-  {
-    kind: 'outflow',
-    icon: 'north_east',
-    iconFilled: false,
-    usdK: 'usd2',
-    badgeK: 'badgeExchange',
-    walletK: 'wallet2',
-    timeK: 'time5m',
-    flowK: 'flowUsdcAmount',
-  },
-  {
-    kind: 'critical',
-    icon: 'rocket_launch',
-    iconFilled: true,
-    usdK: 'usd3',
-    badgeK: 'badgeCritical',
-    walletK: 'wallet3',
-    timeK: 'time12m',
-    flowK: 'flowSolLarge',
-  },
-];
+const MIN_THRESH: Record<string, number> = {
+  '10k': 10_000,
+  '50k': 50_000,
+  '100k': 100_000,
+  '1m': 1_000_000,
+};
 
 function alertShellClass(kind: AlertKind): string {
   const base =
@@ -69,18 +37,54 @@ function iconColor(kind: AlertKind): string {
 }
 
 function badgeClass(kind: AlertKind): string {
+  if (kind === 'critical')
+    return 'pulse-glow rounded bg-primary/20 px-2 py-0.5 font-label text-xs uppercase text-primary';
   if (kind === 'inflow')
     return 'rounded bg-secondary/10 px-2 py-0.5 font-label text-xs uppercase text-secondary';
-  if (kind === 'outflow')
-    return 'rounded bg-error/5 px-2 py-0.5 font-label text-xs uppercase text-error/70';
-  return 'pulse-glow rounded bg-primary/20 px-2 py-0.5 font-label text-xs uppercase text-primary';
+  return 'rounded bg-error/5 px-2 py-0.5 font-label text-xs uppercase text-error/70';
+}
+
+function pickBadgeKey(
+  kind: AlertKind,
+  notional: number,
+  change24: number
+): string {
+  if (kind === 'critical') return 'badgeCritical';
+  if (notional >= 800_000) return 'badgeMega';
+  if (notional >= 200_000) return 'badgeVolSurge';
+  if (change24 < -4) return 'badgeExchange';
+  return 'badgeActive';
 }
 
 export function WhalesPage() {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const [minAmt, setMinAmt] = useState('10k');
   const [tokenFilter, setTokenFilter] = useState('all');
   const [walletQ, setWalletQ] = useState('');
+  const { tokens, loading: tokensLoading } = useTokens(48, false, 0);
+
+  const filteredAlerts = useMemo(() => {
+    const thr = MIN_THRESH[minAmt] ?? 10_000;
+    let list = tokens.filter(
+      (x) => Math.max(x.volume_24h, x.liquidity * 0.2) >= thr
+    );
+    if (tokenFilter !== 'all') {
+      list = list.filter(
+        (x) => x.symbol.toUpperCase() === tokenFilter.toUpperCase()
+      );
+    }
+    const q = walletQ.trim().toLowerCase();
+    if (q) {
+      list = list.filter(
+        (x) =>
+          x.address.toLowerCase().includes(q) ||
+          x.symbol.toLowerCase().includes(q) ||
+          x.name.toLowerCase().includes(q)
+      );
+    }
+    return list.slice(0, 24);
+  }, [tokens, minAmt, tokenFilter, walletQ]);
 
   useEffect(() => {
     document.title = t('whalesPage.docTitle');
@@ -217,70 +221,106 @@ export function WhalesPage() {
           </div>
 
           <div className="space-y-3">
-            {ALERT_DEFS.map((row) => (
-              <div
-                key={row.kind + row.usdK}
-                className={alertShellClass(row.kind)}
-              >
-                {row.kind === 'critical' ? (
-                  <div className="pointer-events-none absolute inset-0 bg-primary/5 opacity-0 transition-opacity group-hover:opacity-100" />
-                ) : null}
+            {tokensLoading && filteredAlerts.length === 0 ? (
+              <div className="flex items-center justify-center gap-3 py-16 text-on-surface/50">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary-container border-t-transparent" />
+                <span className="font-headline text-sm">{t('dashboard.syncing')}</span>
+              </div>
+            ) : null}
+            {!tokensLoading && filteredAlerts.length === 0 ? (
+              <div className="rounded border border-outline-variant/10 bg-surface-container-low/50 py-12 text-center text-sm text-on-surface-variant">
+                {t('hotTable.noMatch')}
+              </div>
+            ) : null}
+            {filteredAlerts.map((tkn) => {
+              const notional = Math.max(tkn.volume_24h, tkn.liquidity * 0.25);
+              const critical =
+                tkn.risk_score === 'D' && notional >= 120_000;
+              const kind: AlertKind = critical
+                ? 'critical'
+                : tkn.change_24h >= 0
+                  ? 'inflow'
+                  : 'outflow';
+              const icon =
+                kind === 'critical'
+                  ? 'rocket_launch'
+                  : kind === 'inflow'
+                    ? 'south_east'
+                    : 'north_east';
+              const iconFilled = kind === 'inflow' || kind === 'critical';
+              const badgeK = pickBadgeKey(kind, notional, tkn.change_24h);
+              const flowLine = `${tkn.symbol} · ${formatUsdCompact(tkn.liquidity)}`;
+
+              return (
                 <div
-                  className={`flex flex-col justify-between gap-4 md:flex-row md:items-center ${row.kind === 'critical' ? 'relative z-10' : ''}`}
+                  key={tkn.address}
+                  className={alertShellClass(kind)}
                 >
-                  <div className="flex items-start gap-4">
-                    <div className={`mt-1 ${iconBoxClass(row.kind)}`}>
-                      <MaterialIcon
-                        name={row.icon}
-                        className={iconColor(row.kind)}
-                        filled={row.iconFilled}
-                      />
-                    </div>
-                    <div>
-                      <div className="mb-1 flex flex-wrap items-center gap-2">
-                        <span className="font-headline text-xl font-bold text-on-surface">
-                          {t(`whalesPage.${row.usdK}`)}
-                        </span>
-                        <span className={badgeClass(row.kind)}>
-                          {t(`whalesPage.${row.badgeK}`)}
-                        </span>
+                  {kind === 'critical' ? (
+                    <div className="pointer-events-none absolute inset-0 bg-primary/5 opacity-0 transition-opacity group-hover:opacity-100" />
+                  ) : null}
+                  <div
+                    className={`flex flex-col justify-between gap-4 md:flex-row md:items-center ${kind === 'critical' ? 'relative z-10' : ''}`}
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className={`mt-1 ${iconBoxClass(kind)}`}>
+                        <MaterialIcon
+                          name={icon}
+                          className={iconColor(kind)}
+                          filled={iconFilled}
+                        />
                       </div>
-                      <div className="flex flex-wrap items-center gap-3 font-label text-[11px] uppercase tracking-wider text-outline">
-                        <span className="flex items-center gap-1">
-                          <MaterialIcon
-                            name="account_balance_wallet"
-                            className="text-xs"
-                          />
-                          {t(`whalesPage.${row.walletK}`)}
-                        </span>
-                        <span className="h-1 w-1 rounded-full bg-outline-variant" />
-                        <span className="flex items-center gap-1">
-                          <MaterialIcon name="history" className="text-xs" />
-                          {t(`whalesPage.${row.timeK}`)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-6">
-                    <div className="text-right">
-                      <div className="font-headline text-sm font-bold text-on-surface">
-                        {t(`whalesPage.${row.flowK}`)}
-                      </div>
-                      <div className="font-label text-[10px] uppercase text-outline">
-                        {t('whalesPage.assetFlow')}
+                      <div>
+                        <div className="mb-1 flex flex-wrap items-center gap-2">
+                          <span className="font-headline text-xl font-bold text-on-surface">
+                            {formatUsdCompact(notional)}
+                          </span>
+                          <span className={badgeClass(kind)}>
+                            {t(`whalesPage.${badgeK}`)}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3 font-label text-[11px] uppercase tracking-wider text-outline">
+                          <span className="flex items-center gap-1">
+                            <MaterialIcon
+                              name="account_balance_wallet"
+                              className="text-xs"
+                            />
+                            {shortenAddress(tkn.address, 4)}
+                          </span>
+                          <span className="h-1 w-1 rounded-full bg-outline-variant" />
+                          <span className="flex items-center gap-1">
+                            <MaterialIcon name="history" className="text-xs" />
+                            {t('whalesPage.feedLive')}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      className="border border-outline-variant/30 p-2 text-outline transition-all hover:border-primary/50 hover:text-primary"
-                      aria-label={t('whalesPage.viewTrace')}
-                    >
-                      <MaterialIcon name="visibility" />
-                    </button>
+                    <div className="flex items-center gap-6">
+                      <div className="text-right">
+                        <div className="font-headline text-sm font-bold text-on-surface">
+                          {flowLine}
+                        </div>
+                        <div className="font-label text-[10px] uppercase text-outline">
+                          {t('whalesPage.assetFlow')}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          navigate(
+                            `/tokens?mint=${encodeURIComponent(tkn.address)}`
+                          )
+                        }
+                        className="border border-outline-variant/30 p-2 text-outline transition-all hover:border-primary/50 hover:text-primary"
+                        aria-label={t('whalesPage.viewTrace')}
+                      >
+                        <MaterialIcon name="visibility" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 

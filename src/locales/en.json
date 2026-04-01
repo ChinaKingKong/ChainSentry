@@ -126,6 +126,13 @@
     "maker": "Maker",
     "txn": "TXN",
     "txDisclaimer": "Illustrative tape — wire Helius / DEX APIs for live fills.",
+    "poolActivity": "Recent pool signatures",
+    "colSignature": "Signature",
+    "colSlot": "Slot",
+    "linkSolscanTx": "View on Solscan",
+    "poolActivityEmpty": "No recent signatures for this pool.",
+    "poolActivityLoading": "Loading on-chain signatures…",
+    "poolActivityDisclaimer": "Recent signatures touching the pool (pair) account — not parsed into per-trade buy/sell.",
     "directSwap": "Direct Protocol Swap",
     "youPay": "You Pay",
     "balance": "Balance: —",
@@ -176,6 +183,9 @@
     "time2m": "2m ago",
     "time5m": "5m ago",
     "time12m": "12m ago",
+    "feedLive": "Live",
+    "badgeActive": "Active",
+    "badgeVolSurge": "Volume surge",
     "flowSolAmount": "15,340 SOL",
     "flowUsdcAmount": "892,100 USDC",
     "flowSolLarge": "75,000 SOL",
@@ -275,7 +285,24 @@
     "score98": "98/100",
     "score84": "84/100",
     "score12": "12/100",
-    "score100": "100/100"
+    "score100": "100/100",
+    "analyze": "Analyze",
+    "analyzing": "Scanning…",
+    "preAnalyzeHint": "Enter a mint address and tap Analyze to load mint/freeze authorities and holder concentration from chain.",
+    "metaEvidence": "Metaplex metadata is not fetched here; verify via indexer or explorer.",
+    "statusFailed": "FAILED",
+    "meterModerate": "Moderate",
+    "meterPoor": "High risk",
+    "rugHeadingCritical": "Critical risk",
+    "rugDescMintOpen": "Mint authority is still active; supply can be increased.",
+    "rugHeadingWarn": "High concentration",
+    "rugDescConc": "Top 10 wallets hold ~{{pct}}% of supply.",
+    "rugDescSafe": "Mint disabled and holders relatively distributed; still review trading and liquidity.",
+    "ownHeadingPartial": "Partial",
+    "ownDescPartial": "Mint or freeze authority may still exist — see checklist.",
+    "liqUnknown": "—",
+    "liqDescDex": "Source: DexScreener · {{dex}}",
+    "taxSplStandard": "Standard SPL mint has no built-in buy/sell tax; always verify program-specific logic."
   },
   "pages": {
     "whales": {
@@ -290,6 +317,11 @@
   "fab": {
     "scrollTop": "Scroll to top",
     "focusRadar": "Focus command radar"
+  },
+  "sentryErrors": {
+    "invalidMint": "Enter a valid Solana address (Base58).",
+    "notSplMint": "Not a standard SPL Token mint, or Token-2022 / non-mint account.",
+    "auditFailed": "On-chain query failed. Try again later."
   },
   "errors": {
     "rpcFailed": "RPC request failed",

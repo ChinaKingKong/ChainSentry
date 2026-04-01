@@ -8,34 +8,72 @@ import type { Token, DexScreenerResponse, DexScreenerPair } from '../types/token
 const DEXSCREENER_BASE = 'https://api.dexscreener.com/latest/dex';
 const SOLANA_CHAIN_ID = 'solana' as const;
 
+/** DexScreener GET /latest/dex/search 仅接受查询参数 `q`；使用 `query` 会 400。文档：https://docs.dexscreener.com/api/reference */
+const SOLANA_SEARCH_QUERIES = ['raydium', 'pump', 'orca'] as const;
+
 export class TokenService {
   /**
-   * 获取 Solana 热门代币
+   * 获取 Solana 热门代币（合并若干 `q=` 搜索结果，按 24h 成交量排序）
    */
   static async getTopTokens(limit: number = 20): Promise<Token[]> {
     try {
-      const response = await axios.get<DexScreenerResponse>(
-        `${DEXSCREENER_BASE}/search/?query=solana`,
-        { timeout: 10000 }
+      const settled = await Promise.allSettled(
+        SOLANA_SEARCH_QUERIES.map((q) =>
+          axios.get<DexScreenerResponse>(`${DEXSCREENER_BASE}/search`, {
+            params: { q },
+            timeout: 10000,
+          })
+        )
       );
 
-      const pairs = response.data.pairs || [];
+      const byPair = new Map<string, DexScreenerPair>();
 
-      const solanaPairs = pairs.filter(p => p.chainId === SOLANA_CHAIN_ID);
+      for (const result of settled) {
+        if (result.status !== 'fulfilled') continue;
+        const pairs = result.value.data.pairs || [];
+        for (const p of pairs) {
+          if (p.chainId !== SOLANA_CHAIN_ID) continue;
+          const id = p.pairAddress;
+          if (!id) continue;
+          const prev = byPair.get(id);
+          const vol = p.volume?.h24 || 0;
+          if (!prev || vol > (prev.volume?.h24 || 0)) byPair.set(id, p);
+        }
+      }
 
-      // 按交易量排序
+      const solanaPairs = [...byPair.values()];
       solanaPairs.sort(
         (a, b) => (b.volume?.h24 || 0) - (a.volume?.h24 || 0)
       );
 
-      // 取前 N 个
       const topPairs = solanaPairs.slice(0, limit);
-
-      // 格式化数据
-      return topPairs.map(pair => this.formatTokenData(pair));
+      return topPairs.map((pair) => this.formatTokenData(pair));
     } catch (error) {
       console.error('Error fetching tokens:', error);
       return [];
+    }
+  }
+
+  /**
+   * 按 Mint 拉取 DexScreener 上流动性最高的一条 Solana 交易对。
+   */
+  static async getBestPairForMint(mintAddress: string): Promise<DexScreenerPair | null> {
+    try {
+      const response = await axios.get<DexScreenerResponse>(
+        `${DEXSCREENER_BASE}/tokens/${encodeURIComponent(mintAddress)}`,
+        { timeout: 10000 }
+      );
+      const pairs = (response.data.pairs || []).filter(
+        (p) => p.chainId === SOLANA_CHAIN_ID
+      );
+      if (pairs.length === 0) return null;
+      pairs.sort(
+        (a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0)
+      );
+      return pairs[0] ?? null;
+    } catch (error) {
+      console.error('Error fetching token pairs:', error);
+      return null;
     }
   }
 

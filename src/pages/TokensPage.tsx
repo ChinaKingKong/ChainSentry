@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { MaterialIcon } from '../components/ui/MaterialIcon';
+import { usePairActivity } from '../hooks/usePairActivity';
 import { useTokens } from '../hooks/useTokens';
 import { TokenService } from '../services/api';
 import { formatTokenPrice, formatUsdCompact, shortenAddress } from '../lib/format';
@@ -20,33 +21,6 @@ const CHART_BARS = [
   { h: 'h-[80%]', line: 'h-32', tone: 'secondary' as const },
   { h: 'h-[60%]', line: 'h-36', tone: 'error' as const },
   { h: 'h-[75%]', line: 'h-24', tone: 'secondary' as const },
-];
-
-const MOCK_TXS = [
-  {
-    time: '12:42:01',
-    side: 'buy' as const,
-    amount: '4,200',
-    sym: 'SENT',
-    price: '$0.4282',
-    maker: '8jA…w9N',
-  },
-  {
-    time: '12:41:45',
-    side: 'sell' as const,
-    amount: '12,500',
-    sym: 'SENT',
-    price: '$0.4278',
-    maker: '4kP…v2M',
-  },
-  {
-    time: '12:41:12',
-    side: 'buy' as const,
-    amount: '800',
-    sym: 'SENT',
-    price: '$0.4285',
-    maker: '9xZ…L0P',
-  },
 ];
 
 function barToneClass(tone: 'secondary' | 'error', part: 'bar' | 'wick') {
@@ -92,6 +66,11 @@ export function TokensPage() {
   const copyCa = () => {
     if (token?.address) void navigator.clipboard.writeText(token.address);
   };
+
+  const { rows: poolSigs, loading: poolSigLoading } = usePairActivity(
+    token?.pair_address,
+    14
+  );
 
   if (loading && !token) {
     return (
@@ -300,18 +279,13 @@ export function TokensPage() {
           <section className="border border-outline-variant/10 bg-surface-container">
             <div className="flex flex-col gap-3 border-b border-outline-variant/5 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
               <h3 className="font-headline text-sm font-bold uppercase tracking-widest">
-                {t('tokensPage.recentTx')}
+                {t('tokensPage.poolActivity')}
               </h3>
-              <div className="flex gap-4 font-label text-[10px]">
-                <span className="flex items-center gap-1">
-                  <span className="h-1.5 w-1.5 rounded-full bg-secondary" />
-                  {t('tokensPage.buy')}
+              {poolSigLoading ? (
+                <span className="font-label text-[10px] text-on-surface-variant">
+                  {t('tokensPage.poolActivityLoading')}
                 </span>
-                <span className="flex items-center gap-1">
-                  <span className="h-1.5 w-1.5 rounded-full bg-error" />
-                  {t('tokensPage.sell')}
-                </span>
-              </div>
+              ) : null}
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left font-label text-xs">
@@ -321,16 +295,10 @@ export function TokensPage() {
                       {t('tokensPage.time')}
                     </th>
                     <th className="px-6 py-3 font-medium uppercase tracking-tighter">
-                      {t('tokensPage.type')}
+                      {t('tokensPage.colSignature')}
                     </th>
                     <th className="px-6 py-3 font-medium uppercase tracking-tighter">
-                      {t('tokensPage.amount')}
-                    </th>
-                    <th className="px-6 py-3 font-medium uppercase tracking-tighter">
-                      {t('tokensPage.priceUsd')}
-                    </th>
-                    <th className="px-6 py-3 font-medium uppercase tracking-tighter">
-                      {t('tokensPage.maker')}
+                      {t('tokensPage.colSlot')}
                     </th>
                     <th className="px-6 py-3 text-right font-medium uppercase tracking-tighter">
                       {t('tokensPage.txn')}
@@ -338,32 +306,62 @@ export function TokensPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-outline-variant/5">
-                  {MOCK_TXS.map((row) => (
-                    <tr
-                      key={row.time}
-                      className="transition-colors hover:bg-surface-container-high"
-                    >
-                      <td className="px-6 py-4 text-on-surface-variant">{row.time}</td>
+                  {poolSigs.length === 0 && !poolSigLoading ? (
+                    <tr>
                       <td
-                        className={`px-6 py-4 font-bold ${row.side === 'buy' ? 'text-secondary' : 'text-error'}`}
+                        colSpan={4}
+                        className="px-6 py-8 text-center text-on-surface-variant"
                       >
-                        {row.side === 'buy' ? t('tokensPage.txBuy') : t('tokensPage.txSell')}
-                      </td>
-                      <td className="px-6 py-4">
-                        {row.amount} {token.symbol.slice(0, 8)}
-                      </td>
-                      <td className="px-6 py-4">{row.price}</td>
-                      <td className="px-6 py-4 opacity-70">{row.maker}</td>
-                      <td className="px-6 py-4 text-right text-primary">
-                        <MaterialIcon name="open_in_new" className="text-sm" />
+                        {t('tokensPage.poolActivityEmpty')}
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    poolSigs.map((row) => {
+                      const timeStr =
+                        row.blockTime != null
+                          ? new Date(row.blockTime * 1000).toLocaleString(
+                              locale
+                            )
+                          : '—';
+                      const short = `${row.signature.slice(0, 8)}…${row.signature.slice(-6)}`;
+                      const href = `https://solscan.io/tx/${row.signature}`;
+                      return (
+                        <tr
+                          key={row.signature}
+                          className="transition-colors hover:bg-surface-container-high"
+                        >
+                          <td className="px-6 py-4 text-on-surface-variant">
+                            {timeStr}
+                          </td>
+                          <td className="max-w-[140px] truncate px-6 py-4 font-mono text-[11px] text-on-surface">
+                            {short}
+                          </td>
+                          <td className="px-6 py-4 text-on-surface-variant">
+                            {row.slot ?? '—'}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <a
+                              href={href}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-primary hover:underline"
+                              aria-label={t('tokensPage.linkSolscanTx')}
+                            >
+                              <MaterialIcon
+                                name="open_in_new"
+                                className="text-sm"
+                              />
+                            </a>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
             <p className="border-t border-outline-variant/5 px-6 py-2 text-[10px] text-on-surface-variant/70">
-              {t('tokensPage.txDisclaimer')}
+              {t('tokensPage.poolActivityDisclaimer')}
             </p>
           </section>
         </div>
