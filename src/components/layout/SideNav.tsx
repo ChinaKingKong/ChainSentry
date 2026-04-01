@@ -25,8 +25,25 @@ export function SideNav({ nodeActive, slotDisplay }: SideNavProps) {
   const { t } = useTranslation();
 
   return (
-    <aside className="hidden h-full min-h-0 w-64 shrink-0 flex-col border-r border-outline-variant/15 bg-surface-container-lowest pb-6 pt-2 font-headline text-sm uppercase tracking-wider md:flex">
-      <nav className="flex-1 space-y-1">
+    <aside
+      className="hidden h-full min-h-0 w-48 shrink-0 flex-col pb-2 pt-0 md:flex overflow-y-auto"
+      style={{
+        backgroundColor: '#D4D0C8',
+        borderRight: '2px solid #808080',
+        borderRightColor: '#808080',
+      }}
+    >
+      {/* Explorer-style nav panel title */}
+      <div
+        className="win-titlebar mb-0 shrink-0 text-[11px]"
+        style={{ fontSize: '11px', padding: '3px 8px' }}
+      >
+        <MaterialIcon name="folder_open" />
+        <span>Navigation</span>
+      </div>
+
+      {/* Nav items — Windows Explorer left-panel style */}
+      <nav className="flex-1 py-1">
         {items.map((item) => (
           <NavLink
             key={item.id}
@@ -34,68 +51,98 @@ export function SideNav({ nodeActive, slotDisplay }: SideNavProps) {
             end={item.end}
             className={({ isActive }) =>
               [
-                'flex w-full items-center px-6 py-4 transition-colors duration-200',
+                'flex w-full items-center gap-2 px-3 py-1.5 text-[11px] cursor-pointer select-none',
                 isActive
-                  ? 'border-r-4 border-primary-container bg-surface-container-low font-bold text-primary'
-                  : 'text-on-surface opacity-60 hover:bg-surface-container-low/50 hover:opacity-100',
+                  ? 'text-on-primary'
+                  : 'text-on-surface hover:text-on-primary',
               ].join(' ')
             }
+            style={({ isActive }) => ({
+              backgroundColor: isActive ? '#000080' : 'transparent',
+              color: isActive ? '#FFFFFF' : '#000000',
+            })}
           >
             {({ isActive }) => (
               <>
                 <MaterialIcon
                   name={item.icon}
-                  className="mr-4"
+                  className="shrink-0"
                   filled={isActive}
                 />
-                {t(`nav.${item.id}`)}
+                <span>{t(`nav.${item.id}`)}</span>
               </>
             )}
           </NavLink>
         ))}
       </nav>
 
-      <div className="mt-auto space-y-4 px-6">
-        <div className="rounded-lg border border-primary/10 bg-gradient-to-br from-surface-container-low to-surface-container-lowest p-4">
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-primary">
-            {t('sideNav.nodeStatus')}
-          </p>
-          <div className="mb-2 flex items-center justify-between text-xs">
-            <span className="text-on-surface/60">{t('sideNav.solanaMainnet')}</span>
-            <span className={nodeActive ? 'text-secondary' : 'text-error'}>
+      {/* Separator */}
+      <div
+        style={{
+          height: '2px',
+          backgroundColor: '#808080',
+          borderBottom: '1px solid #FFFFFF',
+          margin: '4px 4px',
+        }}
+      />
+
+      {/* Node status group box */}
+      <div className="mx-2 mb-2 shrink-0">
+        {/* Group box label */}
+        <div
+          className="relative mb-1 text-[10px] font-bold text-on-surface px-1"
+          style={{ color: '#000080' }}
+        >
+          {t('sideNav.nodeStatus')}
+        </div>
+        <div
+          className="win-groupbox text-[11px] space-y-1"
+          style={{ padding: '6px 8px' }}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-on-surface/80">{t('sideNav.solanaMainnet')}</span>
+            <span
+              className="font-bold"
+              style={{ color: nodeActive ? '#008000' : '#CC0000' }}
+            >
               {nodeActive ? t('sideNav.active') : t('sideNav.down')}
             </span>
           </div>
-          <p className="mb-3 truncate text-[10px] text-on-surface/40">
+          <div className="truncate text-[10px]" style={{ color: '#444444' }}>
             {t('sideNav.slot', { value: slotDisplay })}
-          </p>
+          </div>
           <button
             type="button"
-            className="w-full border border-primary-container/30 bg-surface-container-low py-2 text-[11px] font-bold uppercase tracking-widest text-primary transition-all hover:bg-primary-container hover:text-on-primary-container"
+            className="win-btn w-full mt-1 text-[10px] py-1"
           >
             {t('sideNav.upgradeNode')}
           </button>
         </div>
-        <div className="flex flex-col gap-2 border-t border-outline-variant/15 pt-4">
-          <a
-            className="flex items-center gap-3 text-[11px] uppercase tracking-widest text-on-surface/60 transition-colors hover:text-primary"
-            href="https://docs.solana.com/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            <MaterialIcon name="menu_book" className="text-sm" />
-            {t('sideNav.docs')}
-          </a>
-          <a
-            className="flex items-center gap-3 text-[11px] uppercase tracking-widest text-on-surface/60 transition-colors hover:text-primary"
-            href="https://helius.dev/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            <MaterialIcon name="contact_support" className="text-sm" />
-            {t('sideNav.support')}
-          </a>
-        </div>
+      </div>
+
+      {/* Links */}
+      <div
+        className="mx-2 pt-2 space-y-1"
+        style={{ borderTop: '1px solid #808080', borderTopColor: '#808080' }}
+      >
+        <a
+          className="flex items-center gap-2 text-[11px] text-primary hover:underline cursor-pointer"
+          href="https://docs.solana.com/"
+          target="_blank"
+          rel="noreferrer"
+        >
+          <MaterialIcon name="menu_book" />
+          {t('sideNav.docs')}
+        </a>
+        <a
+          className="flex items-center gap-2 text-[11px] text-primary hover:underline cursor-pointer"
+          href="https://helius.dev/"
+          target="_blank"
+          rel="noreferrer"
+        >
+          <MaterialIcon name="contact_support" />
+          {t('sideNav.support')}
+        </a>
       </div>
     </aside>
   );

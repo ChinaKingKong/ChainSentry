@@ -5,60 +5,90 @@ export function QuickSwapPanel() {
   const { t } = useTranslation();
 
   return (
-    <div className="rounded border border-primary/10 bg-gradient-to-br from-surface-container-high to-surface-container p-6 shadow-[inset_0_0_20px_rgba(34,211,238,0.05)]">
-      <h4 className="mb-6 text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
-        {t('quickSwap.title')}
-      </h4>
-      <div className="space-y-3">
+    <div
+      style={{
+        border: '2px solid #FFFFFF',
+        borderRightColor: '#808080',
+        borderBottomColor: '#808080',
+        backgroundColor: '#D4D0C8',
+      }}
+    >
+      {/* Win2k window title bar */}
+      <div
+        className="win-titlebar"
+        style={{ fontSize: '11px', padding: '3px 8px' }}
+      >
+        <MaterialIcon name="currency_exchange" />
+        <span>{t('quickSwap.title')}</span>
+      </div>
+
+      <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        {/* Swap link rows — Win2k list items */}
+        {[
+          {
+            href: 'https://jup.ag/swap/SOL-USDC',
+            icon: 'currency_exchange',
+            label: t('quickSwap.solUsdcPair'),
+            sub: t('quickSwap.solUsdcSubtitle'),
+          },
+          {
+            href: 'https://jup.ag/swap/JUP-SOL',
+            icon: 'auto_fix_high',
+            label: t('quickSwap.jupSolPair'),
+            sub: t('quickSwap.jupSolSubtitle'),
+          },
+        ].map((item) => (
+          <a
+            key={item.href}
+            href={item.href}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-2 px-2 py-1.5 text-[11px] no-underline"
+            style={{
+              backgroundColor: '#FFFFFF',
+              border: '2px solid #808080',
+              borderRightColor: '#FFFFFF',
+              borderBottomColor: '#FFFFFF',
+              color: '#000000',
+              cursor: 'pointer',
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLAnchorElement).style.backgroundColor = '#000080';
+              (e.currentTarget as HTMLAnchorElement).style.color = '#FFFFFF';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLAnchorElement).style.backgroundColor = '#FFFFFF';
+              (e.currentTarget as HTMLAnchorElement).style.color = '#000000';
+            }}
+          >
+            <MaterialIcon name={item.icon} className="shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-[11px] leading-tight">{item.label}</p>
+              <p className="text-[10px]" style={{ color: '#666666' }}>{item.sub}</p>
+            </div>
+            <MaterialIcon name="chevron_right" className="shrink-0" />
+          </a>
+        ))}
+
+        {/* Main CTA — Win2k default button style (darker border, bolder) */}
         <a
-          href="https://jup.ag/swap/SOL-USDC"
+          href="https://jup.ag/"
           target="_blank"
           rel="noreferrer"
-          className="group flex cursor-pointer items-center justify-between rounded bg-surface-container-lowest p-3 transition-all hover:bg-primary/5"
+          className="win-btn mt-1 flex items-center justify-center gap-1 text-center text-[11px] font-bold no-underline"
+          style={{
+            /* Default button has slightly thicker outer border in Win2k */
+            outline: '1px solid #000000',
+            outlineOffset: '1px',
+            color: '#000080',
+            textDecoration: 'none',
+            display: 'flex',
+          }}
         >
-          <div className="flex items-center gap-3">
-            <MaterialIcon name="currency_exchange" className="text-primary-container" />
-            <div>
-              <p className="font-headline text-xs font-bold text-on-surface">
-                {t('quickSwap.solUsdcPair')}
-              </p>
-              <p className="text-[10px] text-on-surface/40">{t('quickSwap.solUsdcSubtitle')}</p>
-            </div>
-          </div>
-          <MaterialIcon
-            name="chevron_right"
-            className="text-sm opacity-0 transition-all group-hover:translate-x-1 group-hover:opacity-100"
-          />
-        </a>
-        <a
-          href="https://jup.ag/swap/JUP-SOL"
-          target="_blank"
-          rel="noreferrer"
-          className="group flex cursor-pointer items-center justify-between rounded bg-surface-container-lowest p-3 transition-all hover:bg-primary/5"
-        >
-          <div className="flex items-center gap-3">
-            <MaterialIcon name="auto_fix_high" className="text-primary-container" />
-            <div>
-              <p className="font-headline text-xs font-bold text-on-surface">
-                {t('quickSwap.jupSolPair')}
-              </p>
-              <p className="text-[10px] text-on-surface/40">{t('quickSwap.jupSolSubtitle')}</p>
-            </div>
-          </div>
-          <MaterialIcon
-            name="chevron_right"
-            className="text-sm opacity-0 transition-all group-hover:translate-x-1 group-hover:opacity-100"
-          />
+          <MaterialIcon name="open_in_new" />
+          {t('quickSwap.openTerminal')}
         </a>
       </div>
-      <a
-        href="https://jup.ag/"
-        target="_blank"
-        rel="noreferrer"
-        className="mt-6 block w-full rounded-sm bg-primary py-3 text-center font-headline text-xs font-bold uppercase tracking-widest text-on-primary-container transition-all hover:brightness-110"
-      >
-        {t('quickSwap.openTerminal')}
-      </a>
     </div>
   );
 }

@@ -111,16 +111,41 @@ export function DashboardPage() {
 
   return (
     <>
+      {/* ── Win2k toolbar strip ─────────────────────────────────────────── */}
       <div
         id="dashboard-top"
-        className="mb-8 flex flex-wrap items-center gap-4 rounded border border-outline-variant/10 bg-surface-container-low/40 px-4 py-3"
+        className="mb-3 flex flex-wrap items-center gap-3 px-2 py-1.5"
+        style={{
+          backgroundColor: '#D4D0C8',
+          borderTop: '2px solid #FFFFFF',
+          borderLeft: '2px solid #FFFFFF',
+          borderRight: '2px solid #808080',
+          borderBottom: '2px solid #808080',
+        }}
       >
-        <label className="flex items-center gap-2.5 text-xs text-on-surface/70">
-          <span className="shrink-0 font-headline uppercase tracking-wider">
-            {t('dashboard.pageStep')}
-          </span>
-          <CommandSelect
-            className="w-max min-w-[3.75rem] shrink-0"
+        {/* Separator label */}
+        <span
+          className="text-[11px] font-bold mr-1"
+          style={{ color: '#000080' }}
+        >
+          Dashboard Controls
+        </span>
+
+        {/* Vertical separator */}
+        <div
+          style={{
+            width: '2px',
+            height: '18px',
+            borderLeft: '1px solid #808080',
+            borderRight: '1px solid #FFFFFF',
+          }}
+          aria-hidden
+        />
+
+        <label className="flex items-center gap-1.5 text-[11px] text-on-surface">
+          <span className="shrink-0 font-bold">{t('dashboard.pageStep')}:</span>
+          <select
+            className="win-select"
             value={String(pageStep)}
             onChange={(e) => setPageStep(Number(e.target.value))}
             aria-label={t('dashboard.pageStep')}
@@ -129,36 +154,50 @@ export function DashboardPage() {
             <option value={20}>20</option>
             <option value={30}>30</option>
             <option value={50}>50</option>
-          </CommandSelect>
+          </select>
         </label>
-        <label className="flex items-center gap-2 text-xs text-on-surface/70">
+
+        <label className="flex items-center gap-1.5 text-[11px] text-on-surface cursor-pointer">
           <input
             type="checkbox"
             checked={autoRefresh}
             onChange={(e) => setAutoRefresh(e.target.checked)}
-            className="rounded border-outline-variant/30"
           />
           <span>{t('dashboard.autoRefresh')}</span>
         </label>
+
         <button
           type="button"
           onClick={() => void refetch()}
           disabled={loading}
-          className="rounded-sm bg-primary-container px-4 py-1.5 font-headline text-xs font-bold uppercase tracking-wider text-on-primary-container disabled:opacity-50"
+          className="win-btn text-[11px]"
         >
           {loading ? t('dashboard.syncing') : t('dashboard.refresh')}
         </button>
+
         {updatedStr && (
-          <span className="ml-auto text-[10px] text-on-surface/40">{updatedStr}</span>
+          <span className="ml-auto text-[10px]" style={{ color: '#444444' }}>
+            {updatedStr}
+          </span>
         )}
       </div>
 
+      {/* Error banner */}
       {error && (
-        <div className="mb-6 rounded border border-error/40 bg-error/10 px-4 py-3 text-sm text-error">
+        <div
+          className="mb-3 flex items-center gap-2 px-3 py-2 text-[11px]"
+          style={{
+            backgroundColor: '#FFF0F0',
+            border: '2px solid #CC0000',
+            color: '#CC0000',
+          }}
+        >
+          <span className="font-bold">Error:</span>
           {error}
         </div>
       )}
 
+      {/* Hero stats */}
       <HeroStatsRow
         activityIndex={activityIndex}
         liquidityLabel={formatUsdCompact(totalLiquidity)}
@@ -167,7 +206,8 @@ export function DashboardPage() {
         rpcLive={rpcConnected}
       />
 
-      <div className="grid grid-cols-1 gap-8 xl:grid-cols-3">
+      {/* Main content grid */}
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
         <div className="xl:col-span-2">
           <HotTokensTable
             tokens={tokens}
@@ -178,23 +218,32 @@ export function DashboardPage() {
             onSentryScan={handleSentryScan}
             sentryScanBusy={sentryLoading}
           />
-          <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-outline-variant/10 pt-4">
+
+          {/* Pagination / Load more strip */}
+          <div
+            className="mt-2 flex flex-wrap items-center gap-2 px-2 py-1.5"
+            style={{
+              backgroundColor: '#D4D0C8',
+              borderTop: '1px solid #808080',
+              borderTopColor: '#808080',
+            }}
+          >
             <button
               type="button"
               onClick={() => handleLoadMore()}
               disabled={!canLoadMore}
-              className="rounded-sm border border-primary/30 bg-surface-container-high px-4 py-2 font-headline text-xs font-bold uppercase tracking-wider text-primary transition-colors hover:border-primary/50 hover:bg-surface-container-highest disabled:cursor-not-allowed disabled:opacity-40"
+              className="win-btn text-[11px]"
             >
               {t('dashboard.loadMore')}
             </button>
-            <span className="text-[11px] text-on-surface/50">
+            <span className="text-[11px] text-on-surface">
               {t('dashboard.loadedCount', {
                 n: tokens.length,
                 limit: fetchLimit,
               })}
             </span>
             {!loading && !canLoadMore && tokens.length > 0 ? (
-              <span className="text-[11px] text-on-surface/35">
+              <span className="text-[11px]" style={{ color: '#444444' }}>
                 {fetchLimit >= DASH_FETCH_CAP
                   ? t('dashboard.reachedFetchCap', { max: DASH_FETCH_CAP })
                   : t('dashboard.noMoreToLoad')}
@@ -203,7 +252,8 @@ export function DashboardPage() {
           </div>
         </div>
 
-        <div className="space-y-8">
+        {/* Sidebar panels */}
+        <div className="space-y-3">
           <SentimentHeatmap tokens={tokens} loading={loading} />
           <QuickSwapPanel />
         </div>

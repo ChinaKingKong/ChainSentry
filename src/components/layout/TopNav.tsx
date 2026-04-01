@@ -14,14 +14,6 @@ export type TopNavProps = {
   showRouteLinks?: boolean;
 };
 
-const routeLinkClass = ({ isActive }: { isActive: boolean }) =>
-  [
-    'px-3 py-1 font-headline text-sm tracking-tight transition-all',
-    isActive
-      ? 'border-b-2 border-primary-container text-primary'
-      : 'text-on-surface/70 hover:bg-surface-container-low hover:text-primary hover:opacity-100',
-  ].join(' ');
-
 export function TopNav({
   searchQuery,
   onSearchChange,
@@ -35,69 +27,114 @@ export function TopNav({
     activityIndex != null ? activityIndex.toLocaleString() : '—';
 
   return (
-    <nav className="z-50 flex w-full shrink-0 items-center justify-between border-b border-outline-variant/15 bg-background/80 px-6 py-3 shadow-[0_0_40px_-10px_rgba(7,13,31,0.6)] backdrop-blur-xl">
-      <div className="flex min-w-0 flex-1 items-center gap-4 lg:gap-8">
+    /* Win2k menu bar */
+    <nav
+      className="shrink-0 flex w-full items-center justify-between px-1 py-0.5 gap-2 flex-wrap"
+      style={{
+        backgroundColor: '#D4D0C8',
+        borderBottom: '1px solid #808080',
+      }}
+    >
+      {/* Left: brand + route links */}
+      <div className="flex items-center gap-0 min-w-0">
         <BrandLockup asLink />
+
         {showRouteLinks && (
-          <div className="hidden items-center gap-2 md:flex lg:gap-4">
-            <NavLink to="/" end className={routeLinkClass}>
-              {t('nav.command')}
-            </NavLink>
-            <NavLink to="/tokens" className={routeLinkClass}>
-              {t('nav.tokens')}
-            </NavLink>
-            <NavLink to="/whales" className={routeLinkClass}>
-              {t('nav.whales')}
-            </NavLink>
+          <div className="hidden items-center md:flex ml-2">
+            {[
+              { to: '/', end: true, label: t('nav.command') },
+              { to: '/tokens', end: false, label: t('nav.tokens') },
+              { to: '/whales', end: false, label: t('nav.whales') },
+              { to: '/sentry', end: false, label: t('nav.sentry') },
+            ].map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                className={({ isActive }) =>
+                  `win-menuitem text-[11px] ${isActive ? 'win-menuitem-active' : ''}`
+                }
+              >
+                {item.label}
+              </NavLink>
+            ))}
           </div>
         )}
-        {showSearch && (
-          <div className="hidden min-w-0 flex-1 items-center rounded-lg bg-surface-container-low px-4 py-1.5 md:flex md:max-w-xs lg:max-w-sm">
-            <MaterialIcon name="search" className="mr-2 shrink-0 text-sm text-primary" />
+      </div>
+
+      {/* Center: search box */}
+      {showSearch && (
+        <div className="hidden md:flex items-center gap-1 flex-1 max-w-xs min-w-0 mx-2">
+          <label className="text-[11px] shrink-0 text-on-surface" htmlFor="top-search">
+            {t('topNav.searchPlaceholder')}:
+          </label>
+          <div className="flex items-center flex-1 min-w-0" style={{
+            border: '2px inset #808080',
+            borderTopColor: '#808080',
+            borderLeftColor: '#808080',
+            borderRightColor: '#FFFFFF',
+            borderBottomColor: '#FFFFFF',
+            backgroundColor: '#FFFFFF',
+            padding: '1px 3px',
+          }}>
+            <MaterialIcon name="search" className="shrink-0 text-on-surface/60" />
             <input
+              id="top-search"
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="min-w-0 flex-1 appearance-none border-0 bg-transparent text-sm text-on-surface shadow-none outline-none ring-0 placeholder:text-on-surface/30 focus:border-0 focus:shadow-none focus:outline-none focus:ring-0 focus-visible:border-0 focus-visible:outline-none focus-visible:ring-0"
+              className="min-w-0 flex-1 border-0 bg-transparent text-[11px] text-on-surface outline-none placeholder:text-on-surface/40"
               placeholder={t('topNav.searchPlaceholder')}
               type="search"
               aria-label={t('topNav.searchAria')}
             />
           </div>
-        )}
-      </div>
-
-      <div className="flex shrink-0 items-center gap-3 sm:gap-6">
-        <div className="hidden items-center gap-3 rounded-sm border border-outline-variant/15 bg-surface-container-low px-3 py-1.5 lg:flex">
-          <span className="font-label text-[10px] text-primary/60">
-            {t('topNav.tps')}
-          </span>
-          <span className="font-label text-sm font-bold tracking-tighter text-primary">
-            {tpsDisplay}
-          </span>
         </div>
-        <div className="hidden items-center gap-4 font-headline text-xs tracking-wider xl:flex">
-          <span className="text-on-surface/50">
-            {t('topNav.fee')}{' '}
-            <span className="text-secondary">{t('topNav.feeValue')}</span>
-          </span>
+      )}
+
+      {/* Right: stats + controls */}
+      <div className="flex shrink-0 items-center gap-1">
+        {/* TPS display — Win2k status chip */}
+        <div
+          className="hidden lg:flex items-center gap-1 px-2 py-0.5 text-[11px]"
+          style={{
+            border: '1px solid #808080',
+            borderRightColor: '#FFFFFF',
+            borderBottomColor: '#FFFFFF',
+            backgroundColor: '#D4D0C8',
+          }}
+        >
+          <span className="text-on-surface/70">TPS:</span>
+          <span className="font-bold text-primary">{tpsDisplay}</span>
+        </div>
+
+        {/* RPC status */}
+        <div
+          className="hidden xl:flex items-center gap-1 px-2 py-0.5 text-[11px]"
+          style={{
+            border: '1px solid #808080',
+            borderRightColor: '#FFFFFF',
+            borderBottomColor: '#FFFFFF',
+            backgroundColor: '#D4D0C8',
+          }}
+        >
           <span
-            className={
-              rpcConnected ? 'text-[10px] text-secondary' : 'text-[10px] text-error'
-            }
-          >
+            className="inline-block h-2 w-2 rounded-full"
+            style={{ backgroundColor: rpcConnected ? '#008000' : '#FF0000' }}
+            aria-hidden
+          />
+          <span className={rpcConnected ? 'text-secondary' : 'text-error'}>
             {rpcConnected ? t('topNav.rpcLive') : t('topNav.rpcOffline')}
           </span>
         </div>
-        <div className="flex items-center gap-2 sm:gap-3">
+
+        <div className="flex items-center gap-1">
           <LanguageSwitcher />
-          <MaterialIcon
-            name="notifications"
-            className="cursor-pointer text-on-surface opacity-70 transition-all hover:opacity-100"
-          />
-          <MaterialIcon
-            name="settings"
-            className="cursor-pointer text-on-surface opacity-70 transition-all hover:opacity-100"
-          />
+          <button type="button" className="win-btn p-1" aria-label="Notifications">
+            <MaterialIcon name="notifications" />
+          </button>
+          <button type="button" className="win-btn p-1" aria-label="Settings">
+            <MaterialIcon name="settings" />
+          </button>
           <WalletConnectButton />
         </div>
       </div>

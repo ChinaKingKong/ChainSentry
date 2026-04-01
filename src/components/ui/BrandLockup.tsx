@@ -1,36 +1,61 @@
 import { useTranslation } from 'react-i18next';
-import { BrandMark } from './BrandMark';
 
 type BrandLockupProps = {
   className?: string;
-  /** 顶栏用链接，侧栏用普通块 */
   asLink?: boolean;
 };
 
 /**
- * 品牌组合：图标盒 + SENTINEL + 本地化副标题
+ * Win2k style brand lockup — flat text logo, no glass effects.
  */
 export function BrandLockup({ className = '', asLink = false }: BrandLockupProps) {
   const { t } = useTranslation();
 
   const inner = (
-    <>
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded border border-primary/20 bg-surface-container-low shadow-[0_0_16px_-6px_rgba(34,211,238,0.35)]">
-        <BrandMark size={40} className="rounded-md" />
+    <div className="flex items-center gap-1.5">
+      {/* Win2k app icon — small pixel-art style box */}
+      <div
+        className="flex h-7 w-7 shrink-0 items-center justify-center text-[10px] font-bold select-none"
+        style={{
+          backgroundColor: '#000080',
+          color: '#FFFFFF',
+          border: '2px solid #FFFFFF',
+          borderRightColor: '#808080',
+          borderBottomColor: '#808080',
+          fontFamily: 'Tahoma, sans-serif',
+        }}
+        aria-hidden
+      >
+        CS
       </div>
       <div>
-        <p className="font-headline text-lg font-black leading-none text-primary">
-          SENTINEL
+        <p
+          className="font-bold leading-none"
+          style={{
+            fontSize: '13px',
+            color: '#000080',
+            fontFamily: 'Tahoma, "MS Sans Serif", Arial, sans-serif',
+            letterSpacing: '0',
+          }}
+        >
+          ChainSentry
         </p>
-        <p className="font-headline text-[10px] uppercase tracking-[0.2em] text-primary-container">
+        <p
+          className="leading-none"
+          style={{
+            fontSize: '9px',
+            color: '#444444',
+            fontFamily: 'Tahoma, "MS Sans Serif", Arial, sans-serif',
+            letterSpacing: '0.05em',
+          }}
+        >
           {t('brand.tagline')}
         </p>
       </div>
-    </>
+    </div>
   );
 
-  const wrapClass =
-    `flex items-center gap-3 ${asLink ? 'transition-opacity hover:opacity-90' : ''} ${className}`.trim();
+  const wrapClass = `inline-flex items-center ${asLink ? 'cursor-pointer' : ''} ${className}`.trim();
 
   if (asLink) {
     return (
