@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+import { intlLocaleFor } from '../../lib/intlLocale';
 import { MaterialIcon } from '../ui/MaterialIcon';
 
 export type HeroStatsRowProps = {
@@ -24,28 +26,39 @@ export function HeroStatsRow({
   highRiskCount,
   rpcLive,
 }: HeroStatsRowProps) {
+  const { t, i18n } = useTranslation();
+  const locale = intlLocaleFor(i18n.language);
+
   const mainNumber =
     activityIndex != null
-      ? new Intl.NumberFormat('en-US', {
+      ? new Intl.NumberFormat(locale, {
           minimumFractionDigits: 1,
           maximumFractionDigits: 1,
         }).format(activityIndex)
-      : '—';
+      : t('hero.dash');
+
+  const changeLine =
+    liquidityChangePct != null
+      ? t('hero.vs24hSample', {
+          sign: liquidityChangePct >= 0 ? '+' : '',
+          pct: liquidityChangePct.toFixed(1),
+        })
+      : t('hero.dash');
 
   return (
     <div className="mb-10 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-      <div className="relative overflow-hidden rounded bg-surface-container-low p-6 group">
+      <div className="group relative overflow-hidden rounded bg-surface-container-low p-6">
         <div className="scanline" />
         <div className="mb-6 flex items-start justify-between">
           <div>
             <p className="mb-1 font-label text-[10px] uppercase tracking-widest text-primary/70">
-              Network TPS
+              {t('hero.networkTps')}
             </p>
             <h2 className="font-headline text-4xl font-bold text-on-surface">
               {mainNumber}
             </h2>
             <p className="mt-1 text-[10px] text-on-surface/40">
-              Derived from finalized slot velocity (×10³)
+              {t('hero.slotDerived')}
             </p>
           </div>
           <div className="flex items-center gap-2 rounded-full bg-secondary/10 px-2 py-1">
@@ -58,7 +71,7 @@ export function HeroStatsRow({
               />
             </span>
             <span className="text-[10px] font-bold uppercase tracking-tighter text-secondary">
-              {rpcLive ? 'Live' : 'Stale'}
+              {rpcLive ? t('hero.live') : t('hero.stale')}
             </span>
           </div>
         </div>
@@ -71,18 +84,14 @@ export function HeroStatsRow({
 
       <div className="relative overflow-hidden rounded bg-surface-container-low p-6">
         <p className="mb-1 font-label text-[10px] uppercase tracking-widest text-primary/70">
-          Liquidity tracked
+          {t('hero.liquidityTracked')}
         </p>
         <h2 className="font-headline text-4xl font-bold text-on-surface">
           {liquidityLabel}
         </h2>
         <div className="mt-4 flex items-center gap-2">
           <MaterialIcon name="trending_up" className="text-sm text-secondary" />
-          <span className="text-xs font-medium text-secondary">
-            {liquidityChangePct != null
-              ? `${liquidityChangePct >= 0 ? '+' : ''}${liquidityChangePct.toFixed(1)}% vs 24h (sample)`
-              : '—'}
-          </span>
+          <span className="text-xs font-medium text-secondary">{changeLine}</span>
         </div>
         <div className="absolute -bottom-4 -right-4 opacity-5">
           <MaterialIcon name="database" className="text-9xl" />
@@ -91,13 +100,13 @@ export function HeroStatsRow({
 
       <div className="relative overflow-hidden rounded border-l-2 border-tertiary-container bg-surface-container-low p-6">
         <p className="mb-1 font-label text-[10px] uppercase tracking-widest text-tertiary-container">
-          High risk alerts
+          {t('hero.highRisk')}
         </p>
         <h2 className="font-headline text-4xl font-bold text-on-surface">
           {highRiskCount}
         </h2>
         <p className="mt-4 text-xs italic text-on-surface/50">
-          Tokens in view graded C/D by liquidity & volume heuristics
+          {t('hero.highRiskHint')}
         </p>
         <div className="absolute right-6 top-6">
           <MaterialIcon

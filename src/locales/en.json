@@ -1,0 +1,174 @@
+{
+  "brand": {
+    "tagline": "On-Chain Eye",
+    "ariaHome": "SENTINEL — On-Chain Eye, home"
+  },
+  "nav": {
+    "command": "Command",
+    "tokens": "Tokens",
+    "whales": "Whales",
+    "sentry": "Sentry"
+  },
+  "topNav": {
+    "searchPlaceholder": "Scan contract / wallet...",
+    "searchAria": "Search contract or wallet",
+    "tps": "TPS",
+    "fee": "FEE:",
+    "feeValue": "~0.000005 SOL",
+    "rpcLive": "RPC live",
+    "rpcOffline": "RPC offline",
+    "connectWallet": "Connect Wallet",
+    "pickWallet": "Choose a wallet",
+    "disconnectWallet": "Disconnect",
+    "walletConnecting": "Connecting…",
+    "walletPhantom": "Phantom",
+    "walletSolflare": "Solflare",
+    "walletMissing": "Not installed",
+    "walletNotInstalled": "Wallet extension not found. Install it and try again.",
+    "walletUserRejected": "Connection was cancelled.",
+    "walletConnectFailed": "Could not connect. Please try again.",
+    "switchLanguage": "Switch language",
+    "langZh": "中文",
+    "langEn": "English"
+  },
+  "sideNav": {
+    "nodeStatus": "Node Status",
+    "solanaMainnet": "Solana mainnet",
+    "active": "Active",
+    "down": "Down",
+    "slot": "Slot {{value}}",
+    "upgradeNode": "Upgrade Node",
+    "docs": "Docs",
+    "support": "Support"
+  },
+  "dashboard": {
+    "rows": "Rows",
+    "autoRefresh": "Auto refresh 30s",
+    "refresh": "Refresh",
+    "syncing": "Sync…",
+    "updated": "Updated {{time}}"
+  },
+  "hero": {
+    "networkTps": "Network TPS",
+    "slotDerived": "Derived from finalized slot velocity (×10³)",
+    "live": "Live",
+    "stale": "Stale",
+    "liquidityTracked": "Liquidity tracked",
+    "vs24hSample": "{{sign}}{{pct}}% vs 24h (sample)",
+    "dash": "—",
+    "highRisk": "High risk alerts",
+    "highRiskHint": "Tokens in view graded C/D by liquidity & volume heuristics"
+  },
+  "hotTable": {
+    "syncing": "Syncing Solana pairs…",
+    "noMatch": "No tokens match your scan.",
+    "meme": "Meme",
+    "defi": "DeFi",
+    "lst": "LST",
+    "title": "Hot Tokens",
+    "asset": "Asset",
+    "price": "Price",
+    "vol24h": "24h Vol",
+    "sentryScore": "Sentry Score",
+    "action": "Action",
+    "sentryScan": "Sentry Scan"
+  },
+  "sentiment": {
+    "title": "Market Sentiment Heat",
+    "fear": "Fear",
+    "neutral": "Neutral",
+    "greed": "Greed"
+  },
+  "quickSwap": {
+    "title": "Quick Swap on Jupiter",
+    "solUsdcPair": "SOL → USDC",
+    "jupSolPair": "JUP → SOL",
+    "solUsdcSubtitle": "Best-effort routing",
+    "jupSolSubtitle": "Slippage: set in Jupiter",
+    "openTerminal": "Open Terminal"
+  },
+  "tokenDetails": {
+    "na": "N/A",
+    "empty": "Select an asset for Sentry scan",
+    "title": "Sentry dossier",
+    "price": "Price",
+    "h24": "24h",
+    "liquidity": "Liquidity",
+    "vol24h": "24h Volume",
+    "dex": "DEX",
+    "riskBand": "Risk band",
+    "quickLinks": "Quick links",
+    "jupiter": "Swap on Jupiter",
+    "dexscreener": "DexScreener",
+    "solscan": "Solscan",
+    "mint": "Mint",
+    "short": "Short: {{addr}}"
+  },
+  "tokensPage": {
+    "docTitle": "SENTINEL | Token Intelligence",
+    "loading": "Loading token intelligence…",
+    "noPairs": "No Solana pairs loaded. Return to Command and refresh feeds.",
+    "verified": "VERIFIED",
+    "pairAge": "Pair age: from DexScreener feed",
+    "liveFeed": "LIVE FEED",
+    "focusPair": "Focus pair",
+    "caLabel": "CA:",
+    "priceUsd": "Price USD",
+    "h24suffix": "(24h)",
+    "estMcap": "Est. MCap",
+    "fdvLine": "FDV (est.): {{v}}",
+    "recentTx": "Recent Transmissions",
+    "buy": "Buy",
+    "sell": "Sell",
+    "time": "Time",
+    "type": "Type",
+    "amount": "Amount",
+    "maker": "Maker",
+    "txn": "TXN",
+    "txDisclaimer": "Illustrative tape — wire Helius / DEX APIs for live fills.",
+    "directSwap": "Direct Protocol Swap",
+    "youPay": "You Pay",
+    "balance": "Balance: —",
+    "youReceive": "You Receive (est.)",
+    "routeJupiter": "Route: Jupiter",
+    "slippage": "Slippage: 0.5%",
+    "executeSwap": "Execute Swap",
+    "sentryAudit": "Sentry Deep Audit",
+    "mintAuth": "Mint Authority",
+    "freezeAuth": "Freeze Authority",
+    "liqPair": "Liquidity (pair)",
+    "unknown": "Unknown",
+    "sentryScore": "Sentry score",
+    "auditHint": "Heuristic from DexScreener liquidity & volume — not on-chain mint scan.",
+    "pairLiq": "Pair liquidity",
+    "vol24h": "Vol (24h)",
+    "top10demo": "Top 10 % (demo)",
+    "ohlcO": "O:",
+    "ohlcH": "H:",
+    "ohlcL": "L:",
+    "ohlcC": "C:",
+    "txBuy": "BUY",
+    "txSell": "SELL"
+  },
+  "pages": {
+    "whales": {
+      "title": "Whale Watcher",
+      "subtitle": "Large on-chain flows — connect a feed to go live."
+    },
+    "sentry": {
+      "title": "Sentry",
+      "subtitle": "Policies, alerts, and automation — roadmap."
+    }
+  },
+  "fab": {
+    "scrollTop": "Scroll to top",
+    "focusRadar": "Focus command radar"
+  },
+  "errors": {
+    "rpcFailed": "RPC request failed",
+    "fetchTokens": "Failed to fetch tokens"
+  },
+  "meta": {
+    "defaultTitle": "SENTINEL | On-Chain Eye"
+  }
+}

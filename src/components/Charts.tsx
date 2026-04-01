@@ -100,7 +100,8 @@ export function Charts({ tokens }: ChartsProps) {
         beginAtZero: true,
         ticks: {
           color: '#9CA3AF',
-          callback: (value: number) => `$${(value / 1e6).toFixed(0)}M`,
+          callback: (value: string | number) =>
+            `$${(Number(value) / 1e6).toFixed(0)}M`,
         },
         grid: {
           color: 'rgba(75, 85, 99, 0.3)',

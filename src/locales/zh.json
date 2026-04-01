@@ -1,0 +1,174 @@
+{
+  "brand": {
+    "tagline": "链上之眼",
+    "ariaHome": "SENTINEL — 链上之眼，首页"
+  },
+  "nav": {
+    "command": "指挥台",
+    "tokens": "代币",
+    "whales": "巨鲸",
+    "sentry": "哨兵"
+  },
+  "topNav": {
+    "searchPlaceholder": "扫描合约 / 钱包…",
+    "searchAria": "搜索合约或钱包",
+    "tps": "TPS",
+    "fee": "手续费：",
+    "feeValue": "~0.000005 SOL",
+    "rpcLive": "RPC 在线",
+    "rpcOffline": "RPC 离线",
+    "connectWallet": "连接钱包",
+    "pickWallet": "选择钱包",
+    "disconnectWallet": "断开",
+    "walletConnecting": "连接中…",
+    "walletPhantom": "Phantom",
+    "walletSolflare": "Solflare",
+    "walletMissing": "未安装",
+    "walletNotInstalled": "未检测到该钱包扩展，请先安装后再试。",
+    "walletUserRejected": "已取消连接。",
+    "walletConnectFailed": "连接失败，请重试。",
+    "switchLanguage": "切换语言",
+    "langZh": "中文",
+    "langEn": "English"
+  },
+  "sideNav": {
+    "nodeStatus": "节点状态",
+    "solanaMainnet": "Solana 主网",
+    "active": "正常",
+    "down": "异常",
+    "slot": "槽位 {{value}}",
+    "upgradeNode": "升级节点",
+    "docs": "文档",
+    "support": "支持"
+  },
+  "dashboard": {
+    "rows": "显示行数",
+    "autoRefresh": "每 30 秒自动刷新",
+    "refresh": "刷新",
+    "syncing": "同步中…",
+    "updated": "更新于 {{time}}"
+  },
+  "hero": {
+    "networkTps": "网络 TPS",
+    "slotDerived": "由已确认槽位速率推算（×10³）",
+    "live": "实时",
+    "stale": "滞后",
+    "liquidityTracked": "追踪流动性",
+    "vs24hSample": "{{sign}}{{pct}}% 对比 24h（样本）",
+    "dash": "—",
+    "highRisk": "高风险预警",
+    "highRiskHint": "当前列表中按流动性与成交量启发式评为 C/D 的代币数量"
+  },
+  "hotTable": {
+    "syncing": "正在同步 Solana 交易对…",
+    "noMatch": "没有符合扫描条件的代币。",
+    "meme": "Meme",
+    "defi": "DeFi",
+    "lst": "LST",
+    "title": "热门代币",
+    "asset": "资产",
+    "price": "价格",
+    "vol24h": "24h 成交量",
+    "sentryScore": "哨兵分",
+    "action": "操作",
+    "sentryScan": "哨兵扫描"
+  },
+  "sentiment": {
+    "title": "市场情绪热力",
+    "fear": "恐惧",
+    "neutral": "中性",
+    "greed": "贪婪"
+  },
+  "quickSwap": {
+    "title": "Jupiter 快捷兑换",
+    "solUsdcPair": "SOL → USDC",
+    "jupSolPair": "JUP → SOL",
+    "solUsdcSubtitle": "尽力聚合路由",
+    "jupSolSubtitle": "滑点在 Jupiter 中设置",
+    "openTerminal": "打开终端"
+  },
+  "tokenDetails": {
+    "na": "暂无",
+    "empty": "选择资产以查看哨兵扫描",
+    "title": "哨兵档案",
+    "price": "价格",
+    "h24": "24h",
+    "liquidity": "流动性",
+    "vol24h": "24h 成交量",
+    "dex": "DEX",
+    "riskBand": "风险档",
+    "quickLinks": "快捷链接",
+    "jupiter": "在 Jupiter 兑换",
+    "dexscreener": "DexScreener",
+    "solscan": "Solscan",
+    "mint": "铸币地址",
+    "short": "缩写：{{addr}}"
+  },
+  "tokensPage": {
+    "docTitle": "SENTINEL | 代币情报",
+    "loading": "正在加载代币情报…",
+    "noPairs": "暂无 Solana 交易对数据，请返回指挥台并刷新数据源。",
+    "verified": "已验证",
+    "pairAge": "池龄：来自 DexScreener 数据源",
+    "liveFeed": "实时行情",
+    "focusPair": "关注交易对",
+    "caLabel": "合约：",
+    "priceUsd": "美元价格",
+    "h24suffix": "（24h）",
+    "estMcap": "估算市值",
+    "fdvLine": "完全稀释估值（估）：{{v}}",
+    "recentTx": "最近成交",
+    "buy": "买入",
+    "sell": "卖出",
+    "time": "时间",
+    "type": "方向",
+    "amount": "数量",
+    "maker": "地址",
+    "txn": "交易",
+    "txDisclaimer": "演示盘口 — 接入 Helius / DEX API 可显示真实成交。",
+    "directSwap": "协议直连兑换",
+    "youPay": "支付",
+    "balance": "余额：—",
+    "youReceive": "预计收到",
+    "routeJupiter": "路由：Jupiter",
+    "slippage": "滑点：0.5%",
+    "executeSwap": "执行兑换",
+    "sentryAudit": "哨兵深度审计",
+    "mintAuth": "铸币权限",
+    "freezeAuth": "冻结权限",
+    "liqPair": "流动性（交易对）",
+    "unknown": "未知",
+    "sentryScore": "哨兵分",
+    "auditHint": "基于 DexScreener 流动性与成交量的启发式评估 — 非链上铸币扫描。",
+    "pairLiq": "交易对流动性",
+    "vol24h": "24h 成交量",
+    "top10demo": "前十占比（演示）",
+    "ohlcO": "开：",
+    "ohlcH": "高：",
+    "ohlcL": "低：",
+    "ohlcC": "收：",
+    "txBuy": "买入",
+    "txSell": "卖出"
+  },
+  "pages": {
+    "whales": {
+      "title": "巨鲸监视",
+      "subtitle": "大额链上资金流 — 接入数据源后即可上线。"
+    },
+    "sentry": {
+      "title": "哨兵",
+      "subtitle": "策略、告警与自动化 — 规划中。"
+    }
+  },
+  "fab": {
+    "scrollTop": "回到顶部",
+    "focusRadar": "聚焦指挥台雷达"
+  },
+  "errors": {
+    "rpcFailed": "RPC 请求失败",
+    "fetchTokens": "获取代币列表失败"
+  },
+  "meta": {
+    "defaultTitle": "SENTINEL | 链上之眼"
+  }
+}

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Token } from '../../types/token';
 import { formatTokenPrice, formatUsdCompact, shortenAddress } from '../../lib/format';
 import {
@@ -25,6 +26,7 @@ export function HotTokensTable({
   onSentryScan,
   maxRows = 12,
 }: HotTokensTableProps) {
+  const { t } = useTranslation();
   const [category, setCategory] = useState<HotTokensCategory>('meme');
 
   const filtered = useMemo(() => {
@@ -46,7 +48,7 @@ export function HotTokensTable({
       <div className="flex min-h-[200px] items-center justify-center rounded bg-surface-container-low/80 p-12 text-on-surface/50">
         <div className="flex items-center gap-3">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary-container border-t-transparent" />
-          <span className="font-headline text-sm">Syncing Solana pairs…</span>
+          <span className="font-headline text-sm">{t('hotTable.syncing')}</span>
         </div>
       </div>
     );
@@ -55,15 +57,15 @@ export function HotTokensTable({
   if (filtered.length === 0) {
     return (
       <div className="rounded bg-surface-container-low/80 p-12 text-center text-on-surface/50">
-        No tokens match your scan.
+        {t('hotTable.noMatch')}
       </div>
     );
   }
 
-  const cats: { id: HotTokensCategory; label: string }[] = [
-    { id: 'meme', label: 'Meme' },
-    { id: 'defi', label: 'DeFi' },
-    { id: 'lst', label: 'LST' },
+  const cats: { id: HotTokensCategory; labelKey: string }[] = [
+    { id: 'meme', labelKey: 'hotTable.meme' },
+    { id: 'defi', labelKey: 'hotTable.defi' },
+    { id: 'lst', labelKey: 'hotTable.lst' },
   ];
 
   return (
@@ -71,7 +73,7 @@ export function HotTokensTable({
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <h3 className="font-headline flex items-center gap-2 text-xl font-bold text-on-surface">
           <MaterialIcon name="local_fire_department" className="text-primary" />
-          Hot Tokens
+          {t('hotTable.title')}
         </h3>
         <div className="flex gap-2">
           {cats.map((c) => (
@@ -85,7 +87,7 @@ export function HotTokensTable({
                   : 'text-on-surface/40 hover:text-on-surface'
               }`}
             >
-              {c.label}
+              {t(c.labelKey)}
             </button>
           ))}
         </div>
@@ -95,11 +97,11 @@ export function HotTokensTable({
         <table className="w-full border-collapse text-left">
           <thead>
             <tr className="border-b border-outline-variant/10 text-[10px] uppercase tracking-widest text-on-surface/40">
-              <th className="pb-4 font-bold">Asset</th>
-              <th className="pb-4 font-bold">Price</th>
-              <th className="pb-4 font-bold">24h Vol</th>
-              <th className="pb-4 font-bold">Sentry Score</th>
-              <th className="pb-4 font-bold">Action</th>
+              <th className="pb-4 font-bold">{t('hotTable.asset')}</th>
+              <th className="pb-4 font-bold">{t('hotTable.price')}</th>
+              <th className="pb-4 font-bold">{t('hotTable.vol24h')}</th>
+              <th className="pb-4 font-bold">{t('hotTable.sentryScore')}</th>
+              <th className="pb-4 font-bold">{t('hotTable.action')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-outline-variant/5">
@@ -162,7 +164,7 @@ export function HotTokensTable({
                       onClick={() => onSentryScan(token)}
                       className="rounded border border-primary/20 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-primary transition-all hover:bg-primary/10"
                     >
-                      Sentry Scan
+                      {t('hotTable.sentryScan')}
                     </button>
                   </td>
                 </tr>

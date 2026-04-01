@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import i18n from '../i18n';
 import {
   fetchSolanaChainStats,
   type SolanaChainStats,
@@ -27,7 +28,9 @@ export function useSolanaChain(pollIntervalMs: number = 15000) {
       }
       prevSample.current = { slot: next.slot, time: now };
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'RPC 请求失败');
+      setError(
+        e instanceof Error ? e.message : i18n.t('errors.rpcFailed')
+      );
     } finally {
       setLoading(false);
     }

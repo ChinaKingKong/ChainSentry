@@ -3,6 +3,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import i18n from '../i18n';
 import { TokenService } from '../services/api';
 import type { Token } from '../types/token';
 
@@ -21,7 +22,9 @@ export function useTokens(limit: number = 20, autoRefresh: boolean = false, refr
       setTokens(data);
       setLastUpdate(new Date());
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch tokens');
+      setError(
+        err instanceof Error ? err.message : i18n.t('errors.fetchTokens')
+      );
     } finally {
       setLoading(false);
     }

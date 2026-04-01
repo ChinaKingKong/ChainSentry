@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { BrandMark } from './BrandMark';
 
 type BrandLockupProps = {
@@ -7,9 +8,11 @@ type BrandLockupProps = {
 };
 
 /**
- * 品牌组合：图标盒 + SENTINEL + ON-CHAIN EYE（与侧栏红框区域一致）
+ * 品牌组合：图标盒 + SENTINEL + 本地化副标题
  */
 export function BrandLockup({ className = '', asLink = false }: BrandLockupProps) {
+  const { t } = useTranslation();
+
   const inner = (
     <>
       <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded border border-primary/20 bg-surface-container-low shadow-[0_0_16px_-6px_rgba(34,211,238,0.35)]">
@@ -20,7 +23,7 @@ export function BrandLockup({ className = '', asLink = false }: BrandLockupProps
           SENTINEL
         </p>
         <p className="font-headline text-[10px] uppercase tracking-[0.2em] text-primary-container">
-          On-Chain Eye
+          {t('brand.tagline')}
         </p>
       </div>
     </>
@@ -31,7 +34,7 @@ export function BrandLockup({ className = '', asLink = false }: BrandLockupProps
 
   if (asLink) {
     return (
-      <a href="/" className={wrapClass} aria-label="SENTINEL — On-Chain Eye">
+      <a href="/" className={wrapClass} aria-label={t('brand.ariaHome')}>
         {inner}
       </a>
     );

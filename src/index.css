@@ -37,8 +37,15 @@
 }
 
 @layer base {
+  html {
+    height: 100%;
+    overflow: hidden;
+  }
+
   body {
     margin: 0;
+    height: 100%;
+    overflow: hidden;
     background-color: var(--color-background);
     color: var(--color-on-surface);
     font-family: var(--font-body);
@@ -52,7 +59,8 @@
   }
 
   #root {
-    min-height: 100vh;
+    height: 100%;
+    overflow: hidden;
   }
 }
 
@@ -65,6 +73,21 @@
   background: rgba(46, 52, 71, 0.4);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+}
+
+.scanline-bg {
+  background: linear-gradient(
+    to bottom,
+    transparent 50%,
+    rgba(34, 211, 238, 0.05) 50%
+  );
+  background-size: 100% 4px;
+}
+
+.glass-panel-strong {
+  background: rgba(46, 52, 71, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .scanline {

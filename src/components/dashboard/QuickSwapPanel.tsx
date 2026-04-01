@@ -1,10 +1,13 @@
+import { useTranslation } from 'react-i18next';
 import { MaterialIcon } from '../ui/MaterialIcon';
 
 export function QuickSwapPanel() {
+  const { t } = useTranslation();
+
   return (
     <div className="rounded border border-primary/10 bg-gradient-to-br from-surface-container-high to-surface-container p-6 shadow-[inset_0_0_20px_rgba(34,211,238,0.05)]">
       <h4 className="mb-6 text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
-        Quick Swap on Jupiter
+        {t('quickSwap.title')}
       </h4>
       <div className="space-y-3">
         <a
@@ -17,9 +20,9 @@ export function QuickSwapPanel() {
             <MaterialIcon name="currency_exchange" className="text-primary-container" />
             <div>
               <p className="font-headline text-xs font-bold text-on-surface">
-                SOL → USDC
+                {t('quickSwap.solUsdcPair')}
               </p>
-              <p className="text-[10px] text-on-surface/40">Best-effort routing</p>
+              <p className="text-[10px] text-on-surface/40">{t('quickSwap.solUsdcSubtitle')}</p>
             </div>
           </div>
           <MaterialIcon
@@ -37,9 +40,9 @@ export function QuickSwapPanel() {
             <MaterialIcon name="auto_fix_high" className="text-primary-container" />
             <div>
               <p className="font-headline text-xs font-bold text-on-surface">
-                JUP → SOL
+                {t('quickSwap.jupSolPair')}
               </p>
-              <p className="text-[10px] text-on-surface/40">Slippage: set in Jupiter</p>
+              <p className="text-[10px] text-on-surface/40">{t('quickSwap.jupSolSubtitle')}</p>
             </div>
           </div>
           <MaterialIcon
@@ -54,7 +57,7 @@ export function QuickSwapPanel() {
         rel="noreferrer"
         className="mt-6 block w-full rounded-sm bg-primary py-3 text-center font-headline text-xs font-bold uppercase tracking-widest text-on-primary-container transition-all hover:brightness-110"
       >
-        Open Terminal
+        {t('quickSwap.openTerminal')}
       </a>
     </div>
   );
