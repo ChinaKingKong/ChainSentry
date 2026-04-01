@@ -4,4 +4,3 @@ export type { TokenFeedCategory } from '../../types/token';
 export { SentimentHeatmap } from './SentimentHeatmap';
 export { QuickSwapPanel } from './QuickSwapPanel';
 export { WhaleWatcher } from './WhaleWatcher';
-export { DashboardFAB, type DashboardFABProps } from './DashboardFAB';

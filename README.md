@@ -96,7 +96,7 @@ src/
 ├── config/solana.ts        # RPC 读取
 ├── pages/                  # Dashboard、Tokens、Whales、Sentry
 ├── components/
-│   ├── layout/             # 顶栏、侧栏、移动端底栏、FAB
+│   ├── layout/             # 顶栏、侧栏、移动端底栏
 │   ├── dashboard/          # 热门表、Hero、哨兵弹层、情绪图等
 │   ├── ui/                 # CommandSelect、Brand、Toast、语言切换
 │   └── wallet/             # 连接按钮
