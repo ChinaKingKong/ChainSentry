@@ -18,7 +18,12 @@ export function MobileBottomNav({
   onActiveChange,
 }: MobileBottomNavProps) {
   return (
-    <nav className="fixed bottom-0 left-0 z-50 flex w-full items-center justify-around border-t border-outline-variant/10 bg-surface-container px-6 py-3 md:hidden">
+    <nav
+      className="fixed left-3 right-3 z-50 mx-auto flex max-w-lg items-center justify-around rounded-2xl border border-outline-variant/20 bg-surface-container/95 px-4 py-2.5 shadow-[0_-8px_32px_rgba(7,13,31,0.55)] backdrop-blur-xl md:hidden"
+      style={{
+        bottom: 'calc(1.35rem + env(safe-area-inset-bottom, 0px))',
+      }}
+    >
       {tabs.map((t) => {
         const isActive = active === t.id;
         return (

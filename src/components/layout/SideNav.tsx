@@ -23,21 +23,7 @@ export function SideNav({
   slotDisplay,
 }: SideNavProps) {
   return (
-    <aside className="docked sticky top-0 hidden h-screen w-64 flex-col border-r border-outline-variant/15 bg-surface-container-lowest py-6 md:flex">
-      <div className="mb-10 flex items-center gap-3 px-6">
-        <div className="flex h-10 w-10 items-center justify-center rounded border border-primary/20 bg-surface-container-low">
-          <MaterialIcon name="security" className="text-primary" filled />
-        </div>
-        <div>
-          <h3 className="font-headline text-lg font-black leading-none text-primary">
-            SENTINEL
-          </h3>
-          <p className="font-headline text-[10px] uppercase tracking-[0.2em] text-primary-container">
-            On-Chain Eye
-          </p>
-        </div>
-      </div>
-
+    <aside className="docked sticky top-0 hidden h-screen w-64 flex-col border-r border-outline-variant/15 bg-surface-container-lowest pb-6 pt-2 md:flex">
       <nav className="flex-1 space-y-1">
         {items.map((item) => {
           const isActive = active === item.id;

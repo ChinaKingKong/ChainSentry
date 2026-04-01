@@ -1,3 +1,4 @@
+import { BrandLockup } from '../ui/BrandLockup';
 import { MaterialIcon } from '../ui/MaterialIcon';
 
 export type TopNavProps = {
@@ -19,9 +20,7 @@ export function TopNav({
   return (
     <nav className="sticky top-0 z-50 flex w-full items-center justify-between border-b border-outline-variant/15 bg-background/80 px-6 py-3 shadow-[0_0_40px_-10px_rgba(7,13,31,0.6)] backdrop-blur-xl">
       <div className="flex items-center gap-8">
-        <span className="font-headline text-xl font-bold uppercase tracking-widest text-primary">
-          SENTINEL
-        </span>
+        <BrandLockup asLink />
         <div className="hidden items-center rounded-lg border border-outline-variant/15 bg-surface-container-low px-4 py-1.5 md:flex">
           <MaterialIcon name="search" className="mr-2 text-sm text-primary" />
           <input

@@ -6,7 +6,6 @@ import { HeroStatsRow } from './components/dashboard/HeroStatsRow';
 import { HotTokensTable } from './components/dashboard/HotTokensTable';
 import { SentimentHeatmap } from './components/dashboard/SentimentHeatmap';
 import { QuickSwapPanel } from './components/dashboard/QuickSwapPanel';
-import { WhaleWatcher } from './components/dashboard/WhaleWatcher';
 import { DashboardFAB } from './components/dashboard/DashboardFAB';
 import { TokenDetails } from './components/TokenDetails';
 import { useTokens } from './hooks/useTokens';
@@ -77,7 +76,7 @@ function App() {
 
         <main
           id="dashboard-main"
-          className="w-full max-w-[1600px] flex-1 px-4 py-6 pb-28 md:px-6 md:py-10 lg:px-10"
+          className="w-full max-w-[1600px] flex-1 px-4 py-6 pb-36 md:px-6 md:py-10 md:pb-10 lg:px-10"
         >
           <div id="dashboard-top" className="mb-8 flex flex-wrap items-center gap-4 rounded border border-outline-variant/10 bg-surface-container-low/40 px-4 py-3">
             <label className="flex items-center gap-2 text-xs text-on-surface/70">
@@ -153,8 +152,6 @@ function App() {
               <TokenDetails token={selectedToken} />
             </div>
           )}
-
-          <WhaleWatcher />
         </main>
       </div>
 
