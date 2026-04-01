@@ -5,9 +5,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import i18n from '../i18n';
 import { TokenService } from '../services/api';
-import type { Token } from '../types/token';
+import type { Token, TokenFeedCategory } from '../types/token';
 
-export function useTokens(limit: number = 20, autoRefresh: boolean = false, refreshInterval: number = 30000) {
+export function useTokens(
+  limit: number = 20,
+  autoRefresh: boolean = false,
+  refreshInterval: number = 30000,
+  category: TokenFeedCategory = 'meme'
+) {
   const [tokens, setTokens] = useState<Token[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -18,7 +23,7 @@ export function useTokens(limit: number = 20, autoRefresh: boolean = false, refr
     setError(null);
 
     try {
-      const data = await TokenService.getTopTokens(limit);
+      const data = await TokenService.getTopTokens(limit, category);
       setTokens(data);
       setLastUpdate(new Date());
     } catch (err) {
@@ -28,7 +33,7 @@ export function useTokens(limit: number = 20, autoRefresh: boolean = false, refr
     } finally {
       setLoading(false);
     }
-  }, [limit]);
+  }, [limit, category]);
 
   useEffect(() => {
     void fetchTokens();

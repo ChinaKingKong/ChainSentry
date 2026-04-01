@@ -1,11 +1,10 @@
 /**
- * Solana 主网 RPC（Helius）。
- * 生产环境建议用 VITE_SOLANA_RPC_URL 覆盖，避免把密钥写进仓库。
+ * Solana JSON-RPC：仅通过环境变量 `VITE_SOLANA_RPC_URL` 配置（见根目录 `.env.example`）。
+ * 未设置时使用主网公共端点（限速，仅适合本地试跑）；生产/正式环境务必在 .env 中填写自有节点或服务商 URL。
  */
-const DEFAULT_HELIUS_RPC =
-  'https://mainnet.helius-rpc.com/?api-key=0bee2740-5ea8-4a42-ad6c-22f6ad1c9953';
+const DEFAULT_PUBLIC_MAINNET_RPC = 'https://api.mainnet-beta.solana.com';
 
 export const SOLANA_CLUSTER = 'mainnet-beta' as const;
 
 export const SOLANA_RPC_URL: string =
-  import.meta.env.VITE_SOLANA_RPC_URL || DEFAULT_HELIUS_RPC;
+  import.meta.env.VITE_SOLANA_RPC_URL?.trim() || DEFAULT_PUBLIC_MAINNET_RPC;

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   computeSecurityScore,
   fetchMintAuditOnChain,
@@ -20,12 +20,15 @@ export type SentryCheckRow = {
 };
 
 export function useSentryAudit() {
+  const scanGen = useRef(0);
   const [loading, setLoading] = useState(false);
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [audit, setAudit] = useState<MintAuditOnChain | null>(null);
   const [pair, setPair] = useState<DexScreenerPair | null>(null);
 
   const clear = useCallback(() => {
+    scanGen.current += 1;
+    setLoading(false);
     setAudit(null);
     setPair(null);
     setErrorKey(null);
@@ -39,10 +42,12 @@ export function useSentryAudit() {
       setPair(null);
       return;
     }
+    const gen = ++scanGen.current;
     setLoading(true);
     setErrorKey(null);
     try {
       const onChain = await fetchMintAuditOnChain(mint);
+      if (gen !== scanGen.current) return;
       if (!onChain) {
         setErrorKey('sentryErrors.notSplMint');
         setAudit(null);
@@ -51,13 +56,15 @@ export function useSentryAudit() {
       }
       setAudit(onChain);
       const best = await TokenService.getBestPairForMint(mint);
+      if (gen !== scanGen.current) return;
       setPair(best);
     } catch {
+      if (gen !== scanGen.current) return;
       setErrorKey('sentryErrors.auditFailed');
       setAudit(null);
       setPair(null);
     } finally {
-      setLoading(false);
+      if (gen === scanGen.current) setLoading(false);
     }
   }, []);
 

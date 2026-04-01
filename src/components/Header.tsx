@@ -27,7 +27,7 @@ export function Header() {
 
           <div
             className="flex items-center gap-3 rounded-lg border border-gray-700/80 bg-gray-800/40 px-4 py-2 text-sm text-gray-300"
-            title="Helius Solana RPC"
+            title="Solana RPC"
           >
             <Radio
               className={`h-4 w-4 shrink-0 ${

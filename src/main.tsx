@@ -4,14 +4,17 @@ import { BrowserRouter } from 'react-router-dom'
 import './i18n'
 import './index.css'
 import App from './App.tsx'
+import { ToastProvider } from './components/ui/ToastProvider'
 import { SolanaWalletProvider } from './wallet/SolanaWalletProvider'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
-      <SolanaWalletProvider>
-        <App />
-      </SolanaWalletProvider>
+      <ToastProvider>
+        <SolanaWalletProvider>
+          <App />
+        </SolanaWalletProvider>
+      </ToastProvider>
     </BrowserRouter>
   </StrictMode>,
 )

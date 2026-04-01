@@ -62,7 +62,7 @@ export function WhalesPage() {
   const [minAmt, setMinAmt] = useState('10k');
   const [tokenFilter, setTokenFilter] = useState('all');
   const [walletQ, setWalletQ] = useState('');
-  const { tokens, loading: tokensLoading } = useTokens(48, false, 0);
+  const { tokens, loading: tokensLoading } = useTokens(96, false, 0);
 
   const filteredAlerts = useMemo(() => {
     const thr = MIN_THRESH[minAmt] ?? 10_000;
@@ -85,6 +85,64 @@ export function WhalesPage() {
     }
     return list.slice(0, 24);
   }, [tokens, minAmt, tokenFilter, walletQ]);
+
+  /** 活跃档案 / 资金流向：按当前列表动态聚合（非链上真实钱包持仓） */
+  const sortedByNotional = useMemo(() => {
+    return [...filteredAlerts].sort((a, b) => {
+      const na = Math.max(a.volume_24h, a.liquidity * 0.25);
+      const nb = Math.max(b.volume_24h, b.liquidity * 0.25);
+      return nb - na;
+    });
+  }, [filteredAlerts]);
+
+  const leadToken = sortedByNotional[0] ?? null;
+
+  const topHoldingsRows = useMemo(() => {
+    if (sortedByNotional.length === 0) return [];
+    const byLiq = [...sortedByNotional]
+      .sort((a, b) => b.liquidity - a.liquidity)
+      .slice(0, 3);
+    const sumLiq = byLiq.reduce((s, t) => s + t.liquidity, 0) || 1;
+    return byLiq.map((t) => ({
+      token: t,
+      pct: (t.liquidity / sumLiq) * 100,
+    }));
+  }, [sortedByNotional]);
+
+  const totalTrackedLiquidity = useMemo(
+    () => sortedByNotional.reduce((s, t) => s + t.liquidity, 0),
+    [sortedByNotional]
+  );
+
+  const samplePositive24hPct = useMemo(() => {
+    if (sortedByNotional.length === 0) return null;
+    const up = sortedByNotional.filter((t) => t.change_24h >= 0).length;
+    return Math.round((100 * up) / sortedByNotional.length);
+  }, [sortedByNotional]);
+
+  const flow24h = useMemo(() => {
+    let volUp = 0;
+    let volDown = 0;
+    for (const t of sortedByNotional) {
+      if (t.change_24h >= 0) volUp += t.volume_24h;
+      else volDown += t.volume_24h;
+    }
+    const total = volUp + volDown || 1;
+    return {
+      volUp,
+      volDown,
+      upBarPct: (volUp / total) * 100,
+      downBarPct: (volDown / total) * 100,
+    };
+  }, [sortedByNotional]);
+
+  const flowSentimentKey = useMemo(() => {
+    if (samplePositive24hPct == null) return null;
+    if (samplePositive24hPct >= 66) return 'whalesPage.sentimentStrongBull';
+    if (samplePositive24hPct >= 40) return 'whalesPage.sentimentNeutralLeanUp';
+    if (samplePositive24hPct >= 25) return 'whalesPage.sentimentNeutral';
+    return 'whalesPage.sentimentBearLean';
+  }, [samplePositive24hPct]);
 
   useEffect(() => {
     document.title = t('whalesPage.docTitle');
@@ -340,86 +398,116 @@ export function WhalesPage() {
               </div>
             </div>
 
-            <div className="mb-8 flex items-center gap-4">
-              <div className="relative">
-                <div className="flex h-16 w-16 items-center justify-center rounded border-2 border-primary/20 bg-surface-container-low">
-                  <MaterialIcon
-                    name="capture"
-                    className="text-3xl text-primary"
-                    filled
-                  />
-                </div>
-                <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border-2 border-surface bg-secondary-container">
-                  <MaterialIcon
-                    name="verified"
-                    className="text-[12px] text-on-secondary"
-                    filled
-                  />
-                </span>
+            {tokensLoading && sortedByNotional.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-3 py-10 text-on-surface/45">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary-container border-t-transparent" />
+                <span className="font-headline text-xs">{t('dashboard.syncing')}</span>
               </div>
-              <div>
-                <h4 className="font-headline text-lg font-bold uppercase tracking-tight text-on-surface">
-                  {t('whalesPage.profileName')}
-                </h4>
-                <p className="font-label text-xs tracking-wider text-outline">
-                  {t('whalesPage.profileAddr')}
-                </p>
-              </div>
-            </div>
-
-            <div className="mb-8 space-y-4">
-              <div>
-                <div className="mb-1.5 flex justify-between font-label text-[10px] uppercase tracking-widest text-outline">
-                  <span>{t('whalesPage.topHoldings')}</span>
-                  <span>{t('whalesPage.allocation')}</span>
-                </div>
-                <div className="space-y-2">
-                  {(
-                    [
-                      ['holdingSol', 'pct62', 'S'],
-                      ['holdingUsdc', 'pct24', 'U'],
-                      ['holdingBonk', 'pct14', 'B'],
-                    ] as const
-                  ).map(([hk, pk, letter]) => (
-                    <div
-                      key={hk}
-                      className="flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-container text-[10px] font-bold text-on-surface">
-                          {letter}
-                        </div>
-                        <span className="font-label text-xs text-on-surface">
-                          {t(`whalesPage.${hk}`)}
-                        </span>
-                      </div>
-                      <span className="font-label text-xs text-on-surface">
-                        {t(`whalesPage.${pk}`)}
+            ) : !leadToken ? (
+              <p className="py-8 text-center text-sm text-on-surface-variant">
+                {t('whalesPage.profileEmpty')}
+              </p>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate(
+                      `/tokens?mint=${encodeURIComponent(leadToken.address)}`
+                    )
+                  }
+                  className="mb-8 flex w-full items-center gap-4 rounded-sm text-left transition-colors hover:bg-surface-container-high/60"
+                >
+                  <div className="relative shrink-0">
+                    <div className="flex h-16 w-16 items-center justify-center rounded border-2 border-primary/20 bg-surface-container-low">
+                      <span className="font-headline text-lg font-bold text-primary">
+                        {leadToken.symbol.slice(0, 2).toUpperCase()}
                       </span>
                     </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+                    {leadToken.risk_score === 'A' ||
+                    leadToken.risk_score === 'B' ? (
+                      <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border-2 border-surface bg-secondary-container">
+                        <MaterialIcon
+                          name="verified"
+                          className="text-[12px] text-on-secondary"
+                          filled
+                        />
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-label text-[9px] uppercase tracking-widest text-primary">
+                      {t('whalesPage.profileLeadLabel')}
+                    </p>
+                    <h4 className="font-headline truncate text-lg font-bold tracking-tight text-on-surface">
+                      {leadToken.symbol}
+                      <span className="ml-1 font-normal text-on-surface/50">
+                        · {leadToken.name}
+                      </span>
+                    </h4>
+                    <p className="truncate font-mono text-[11px] tracking-wider text-outline">
+                      {shortenAddress(leadToken.address, 5)}
+                    </p>
+                  </div>
+                </button>
 
-            <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-sm border border-outline-variant/10 bg-surface-container-high p-3">
-                <div className="mb-1 font-label text-[9px] uppercase tracking-widest text-outline">
-                  {t('whalesPage.totalValue')}
+                <div className="mb-8 space-y-4">
+                  <div>
+                    <div className="mb-1.5 flex justify-between font-label text-[10px] uppercase tracking-widest text-outline">
+                      <span>{t('whalesPage.topHoldings')}</span>
+                      <span>{t('whalesPage.allocation')}</span>
+                    </div>
+                    <div className="space-y-2">
+                      {topHoldingsRows.map(({ token: tok, pct }) => (
+                        <div
+                          key={tok.address}
+                          className="flex items-center justify-between"
+                        >
+                          <div className="flex min-w-0 items-center gap-2">
+                            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-surface-container text-[10px] font-bold text-on-surface">
+                              {tok.symbol.slice(0, 1).toUpperCase()}
+                            </div>
+                            <span className="truncate font-label text-xs text-on-surface">
+                              {tok.symbol}
+                            </span>
+                          </div>
+                          <span className="shrink-0 font-label text-xs tabular-nums text-on-surface">
+                            {pct.toFixed(1)}%
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <div className="font-headline text-sm font-bold text-on-surface">
-                  {t('whalesPage.totalValueAmt')}
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-sm border border-outline-variant/10 bg-surface-container-high p-3">
+                    <div className="mb-1 font-label text-[9px] uppercase tracking-widest text-outline">
+                      {t('whalesPage.totalValue')}
+                    </div>
+                    <div className="font-headline text-sm font-bold text-on-surface">
+                      {formatUsdCompact(totalTrackedLiquidity)}
+                    </div>
+                    <p className="mt-1 font-label text-[9px] text-on-surface/45">
+                      {t('whalesPage.totalValueHint')}
+                    </p>
+                  </div>
+                  <div className="rounded-sm border border-outline-variant/10 bg-surface-container-high p-3">
+                    <div className="mb-1 font-label text-[9px] uppercase tracking-widest text-outline">
+                      {t('whalesPage.samplePositive24h')}
+                    </div>
+                    <div className="font-headline text-sm font-bold text-secondary">
+                      {samplePositive24hPct != null
+                        ? `${samplePositive24hPct}%`
+                        : '—'}
+                    </div>
+                    <p className="mt-1 font-label text-[9px] text-on-surface/45">
+                      {t('whalesPage.samplePositive24hHint')}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div className="rounded-sm border border-outline-variant/10 bg-surface-container-high p-3">
-                <div className="mb-1 font-label text-[9px] uppercase tracking-widest text-outline">
-                  {t('whalesPage.winRate')}
-                </div>
-                <div className="font-headline text-sm font-bold text-secondary">
-                  {t('whalesPage.winRateAmt')}
-                </div>
-              </div>
-            </div>
+              </>
+            )}
           </div>
 
           <div className="relative overflow-hidden rounded-sm border border-outline-variant/15 bg-surface-container-low p-6">
@@ -433,36 +521,51 @@ export function WhalesPage() {
               {t('whalesPage.marketFlow24h')}
             </h3>
             <div className="relative z-10 space-y-6">
+              <p className="font-label text-[9px] uppercase tracking-widest text-on-surface/40">
+                {t('whalesPage.marketFlowSampleHint')}
+              </p>
               <div>
-                <div className="mb-2 flex items-end justify-between">
+                <div className="mb-2 flex items-end justify-between gap-2">
                   <div className="font-label text-[10px] uppercase text-on-surface">
                     {t('whalesPage.globalInflow')}
                   </div>
                   <div className="font-headline text-lg font-bold text-secondary">
-                    {t('whalesPage.globalInflowAmt')}
+                    {sortedByNotional.length === 0
+                      ? '—'
+                      : `+${formatUsdCompact(flow24h.volUp)}`}
                   </div>
                 </div>
                 <div className="h-1 w-full overflow-hidden rounded-full bg-surface-container-highest">
-                  <div className="h-full w-3/4 bg-secondary" />
+                  <div
+                    className="h-full bg-secondary transition-[width] duration-500"
+                    style={{ width: `${flow24h.upBarPct}%` }}
+                  />
                 </div>
               </div>
               <div>
-                <div className="mb-2 flex items-end justify-between">
+                <div className="mb-2 flex items-end justify-between gap-2">
                   <div className="font-label text-[10px] uppercase text-on-surface">
                     {t('whalesPage.globalOutflow')}
                   </div>
                   <div className="font-headline text-lg font-bold text-error">
-                    {t('whalesPage.globalOutflowAmt')}
+                    {sortedByNotional.length === 0
+                      ? '—'
+                      : `−${formatUsdCompact(flow24h.volDown)}`}
                   </div>
                 </div>
                 <div className="h-1 w-full overflow-hidden rounded-full bg-surface-container-highest">
-                  <div className="h-full w-1/4 bg-error" />
+                  <div
+                    className="h-full bg-error transition-[width] duration-500"
+                    style={{ width: `${flow24h.downBarPct}%` }}
+                  />
                 </div>
               </div>
               <div className="border-t border-outline-variant/10 pt-4">
                 <div className="flex items-center gap-2 font-label text-[11px] uppercase tracking-wider text-outline">
                   <MaterialIcon name="info" className="text-xs text-primary" />
-                  <span>{t('whalesPage.sentiment')}</span>
+                  <span>
+                    {flowSentimentKey ? t(flowSentimentKey) : t('whalesPage.sentiment')}
+                  </span>
                 </div>
               </div>
             </div>

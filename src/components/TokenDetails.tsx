@@ -2,8 +2,9 @@
  * 代币详情 — SENTINEL 主题
  */
 
-import { ExternalLink, Repeat, BarChart3, Search } from 'lucide-react';
+import { ExternalLink, Repeat, BarChart3, Search, Copy } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useClipboardCopy } from '../hooks/useClipboardCopy';
 import { TokenService } from '../services/api';
 import type { Token } from '../types/token';
 import { shortenAddress } from '../lib/format';
@@ -16,6 +17,7 @@ interface TokenDetailsProps {
 export function TokenDetails({ token }: TokenDetailsProps) {
   const { t, i18n } = useTranslation();
   const locale = intlLocaleFor(i18n.language);
+  const copyToClipboard = useClipboardCopy();
 
   if (!token) {
     return (
@@ -147,7 +149,17 @@ export function TokenDetails({ token }: TokenDetailsProps) {
       </div>
 
       <div className="mt-6 rounded-lg border border-outline-variant/10 bg-surface-container-lowest p-3">
-        <p className="mb-1 text-xs text-on-surface/50">{t('tokenDetails.mint')}</p>
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <p className="text-xs text-on-surface/50">{t('tokenDetails.mint')}</p>
+          <button
+            type="button"
+            onClick={() => void copyToClipboard(token.address)}
+            className="rounded p-1 text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-primary"
+            aria-label={t('tokensPage.copyMint')}
+          >
+            <Copy className="h-4 w-4" />
+          </button>
+        </div>
         <p className="break-all font-mono text-sm text-on-surface-variant">
           {token.address}
         </p>

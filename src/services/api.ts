@@ -3,50 +3,132 @@
  */
 
 import axios from 'axios';
-import type { Token, DexScreenerResponse, DexScreenerPair } from '../types/token';
+import { buildJupiterSwapUrl, JUPITER_SOL_MINT } from './jupiterQuote';
+import type {
+  Token,
+  DexScreenerResponse,
+  DexScreenerPair,
+  TokenFeedCategory,
+} from '../types/token';
 
 const DEXSCREENER_BASE = 'https://api.dexscreener.com/latest/dex';
 const SOLANA_CHAIN_ID = 'solana' as const;
 
 /** DexScreener GET /latest/dex/search 仅接受查询参数 `q`；使用 `query` 会 400。文档：https://docs.dexscreener.com/api/reference */
-const SOLANA_SEARCH_QUERIES = ['raydium', 'pump', 'orca'] as const;
+const CATEGORY_SEARCH_QUERIES: Record<TokenFeedCategory, readonly string[]> = {
+  /** 多关键词扩大覆盖面；同一 mint 多池子在下游按 mint 去重 */
+  meme: [
+    'pump',
+    'bonk',
+    'wen',
+    'meme',
+    'dog',
+    'cat',
+    'pepe',
+    'sol',
+    'trump',
+  ],
+  /** 含 raydium/orca/usdc 等，保证多数结果为 Solana 链上 DeFi 对 */
+  defi: [
+    'raydium',
+    'orca',
+    'meteora',
+    'jupiter',
+    'usdc',
+    'drift',
+    'kamino',
+    'marginfi',
+  ],
+  /** 质押衍生：多关键词 + 常见 LST 符号，避免单一词无 Solana 结果 */
+  lst: [
+    'marinade',
+    'msol',
+    'jito',
+    'jitosol',
+    'jupsol',
+    'bsol',
+    'stsol',
+    'blaze',
+    'inf',
+    'sanctum',
+  ],
+};
+
+/** 分类搜索 Solana 条数过少时合并，避免 DeFi/LST Tab 空白 */
+const FALLBACK_SOLANA_SEARCH: readonly string[] = ['raydium', 'orca', 'pump'];
+
+const MAX_TOP_TOKENS = 200;
 
 export class TokenService {
+  /** 同一 mint 只保留 24h 成交量最高的池子，去掉 MEME 等分类下的重复代币行 */
+  private static dedupePairsByMint(pairs: DexScreenerPair[]): DexScreenerPair[] {
+    const byMint = new Map<string, DexScreenerPair>();
+    for (const p of pairs) {
+      const mint = p.baseToken?.address?.trim();
+      if (!mint) continue;
+      const prev = byMint.get(mint);
+      const vol = p.volume?.h24 || 0;
+      if (!prev || vol > (prev.volume?.h24 || 0)) byMint.set(mint, p);
+    }
+    return [...byMint.values()];
+  }
+
+  private static async mergeSearchQueries(
+    queries: readonly string[]
+  ): Promise<Map<string, DexScreenerPair>> {
+    const settled = await Promise.allSettled(
+      queries.map((q) =>
+        axios.get<DexScreenerResponse>(`${DEXSCREENER_BASE}/search`, {
+          params: { q },
+          timeout: 10000,
+        })
+      )
+    );
+
+    const byPair = new Map<string, DexScreenerPair>();
+
+    for (const result of settled) {
+      if (result.status !== 'fulfilled') continue;
+      const pairs = result.value.data.pairs || [];
+      for (const p of pairs) {
+        if (p.chainId !== SOLANA_CHAIN_ID) continue;
+        const id = p.pairAddress;
+        if (!id) continue;
+        const prev = byPair.get(id);
+        const vol = p.volume?.h24 || 0;
+        if (!prev || vol > (prev.volume?.h24 || 0)) byPair.set(id, p);
+      }
+    }
+
+    return byPair;
+  }
+
   /**
-   * 获取 Solana 热门代币（合并若干 `q=` 搜索结果，按 24h 成交量排序）
+   * 获取 Solana 热门代币：按指挥台分类合并若干 `q=` 搜索，按 24h 成交量排序。
    */
-  static async getTopTokens(limit: number = 20): Promise<Token[]> {
+  static async getTopTokens(
+    limit: number = 20,
+    category: TokenFeedCategory = 'meme'
+  ): Promise<Token[]> {
     try {
-      const settled = await Promise.allSettled(
-        SOLANA_SEARCH_QUERIES.map((q) =>
-          axios.get<DexScreenerResponse>(`${DEXSCREENER_BASE}/search`, {
-            params: { q },
-            timeout: 10000,
-          })
-        )
-      );
+      const cap = Math.min(Math.max(1, limit), MAX_TOP_TOKENS);
+      const primary = CATEGORY_SEARCH_QUERIES[category];
+      const byPair = await this.mergeSearchQueries(primary);
 
-      const byPair = new Map<string, DexScreenerPair>();
-
-      for (const result of settled) {
-        if (result.status !== 'fulfilled') continue;
-        const pairs = result.value.data.pairs || [];
-        for (const p of pairs) {
-          if (p.chainId !== SOLANA_CHAIN_ID) continue;
-          const id = p.pairAddress;
-          if (!id) continue;
-          const prev = byPair.get(id);
-          const vol = p.volume?.h24 || 0;
-          if (!prev || vol > (prev.volume?.h24 || 0)) byPair.set(id, p);
+      const minFill = Math.min(Math.max(cap, 12), 48);
+      if (byPair.size < minFill) {
+        const extra = await this.mergeSearchQueries(FALLBACK_SOLANA_SEARCH);
+        for (const [id, p] of extra) {
+          if (!byPair.has(id)) byPair.set(id, p);
         }
       }
 
-      const solanaPairs = [...byPair.values()];
-      solanaPairs.sort(
+      const deduped = this.dedupePairsByMint([...byPair.values()]);
+      deduped.sort(
         (a, b) => (b.volume?.h24 || 0) - (a.volume?.h24 || 0)
       );
 
-      const topPairs = solanaPairs.slice(0, limit);
+      const topPairs = deduped.slice(0, cap);
       return topPairs.map((pair) => this.formatTokenData(pair));
     } catch (error) {
       console.error('Error fetching tokens:', error);
@@ -123,7 +205,7 @@ export class TokenService {
    * 获取 Jupiter 交易链接
    */
   static getJupiterSwapUrl(tokenAddress: string): string {
-    return `https://quote.jup.ag/v6/swap?outputMint=${tokenAddress}`;
+    return buildJupiterSwapUrl(JUPITER_SOL_MINT, tokenAddress);
   }
 
   /**

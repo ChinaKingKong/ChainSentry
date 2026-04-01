@@ -56,6 +56,21 @@ export function AppLayout() {
         aria-hidden
       />
 
+      {/* 参照 Hero 流动性卡：右下角钱币装饰底图 + 渐变融入背景 */}
+      <div
+        className="pointer-events-none fixed bottom-0 right-0 z-0 overflow-hidden"
+        style={{
+          width: 'min(48vw, 440px)',
+          height: 'min(48vh, 440px)',
+        }}
+        aria-hidden
+      >
+        <div
+          className="absolute inset-0 bg-contain bg-right-bottom bg-no-repeat opacity-[0.16]" 
+        />
+        <div className="absolute inset-0 bg-gradient-to-tl from-background from-[22%] via-background/88 to-transparent" />
+      </div>
+
       <TopNav
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useOutletContext } from 'react-router-dom';
 import type { AppOutletContext } from '../components/layout/AppLayout';
@@ -6,26 +6,73 @@ import { HeroStatsRow } from '../components/dashboard/HeroStatsRow';
 import { HotTokensTable } from '../components/dashboard/HotTokensTable';
 import { SentimentHeatmap } from '../components/dashboard/SentimentHeatmap';
 import { QuickSwapPanel } from '../components/dashboard/QuickSwapPanel';
-import { TokenDetails } from '../components/TokenDetails';
-import { MaterialIcon } from '../components/ui/MaterialIcon';
+import { SentryScanModal } from '../components/dashboard/SentryScanModal';
+import { CommandSelect } from '../components/ui/CommandSelect';
+import { useSentryAudit } from '../hooks/useSentryAudit';
 import { useTokens } from '../hooks/useTokens';
 import { formatUsdCompact } from '../lib/format';
 import { intlLocaleFor } from '../lib/intlLocale';
-import type { Token } from '../types/token';
+import type { Token, TokenFeedCategory } from '../types/token';
+
+const DASH_FETCH_CAP = 200;
 
 export function DashboardPage() {
   const { t, i18n } = useTranslation();
   const locale = intlLocaleFor(i18n.language);
   const { searchQuery, activityIndex, rpcConnected } =
     useOutletContext<AppOutletContext>();
-  const [limit, setLimit] = useState(20);
+  const [pageStep, setPageStep] = useState(20);
+  const [fetchLimit, setFetchLimit] = useState(20);
   const [autoRefresh, setAutoRefresh] = useState(false);
-  const [selectedToken, setSelectedToken] = useState<Token | null>(null);
+  const [feedCategory, setFeedCategory] = useState<TokenFeedCategory>('meme');
+  const [sentryModalOpen, setSentryModalOpen] = useState(false);
+  const [sentryModalToken, setSentryModalToken] = useState<Token | null>(null);
+
+  const {
+    loading: sentryLoading,
+    errorKey: sentryErrorKey,
+    score: sentryScore,
+    audit: sentryAuditData,
+    pair: sentryPair,
+    symbol: sentrySymbol,
+    displayName: sentryDisplayName,
+    liquidityUsd: sentryLiquidityUsd,
+    tableRows: sentryTableRows,
+    analyze: runSentryAnalyze,
+    clear: clearSentryAudit,
+  } = useSentryAudit();
+
   const { tokens, loading, error, lastUpdate, refetch } = useTokens(
-    limit,
+    fetchLimit,
     autoRefresh,
-    30000
+    30000,
+    feedCategory
   );
+
+  const handleFeedCategoryChange = useCallback(
+    (c: TokenFeedCategory) => {
+      if (c === feedCategory) return;
+      setFeedCategory(c);
+      setFetchLimit(pageStep);
+    },
+    [feedCategory, pageStep]
+  );
+
+  const handleSentryScan = useCallback(
+    async (token: Token) => {
+      clearSentryAudit();
+      setSentryModalToken(token);
+      setSentryModalOpen(true);
+      await runSentryAnalyze(token.address);
+    },
+    [clearSentryAudit, runSentryAnalyze]
+  );
+
+  const closeSentryModal = useCallback(() => {
+    setSentryModalOpen(false);
+    setSentryModalToken(null);
+    clearSentryAudit();
+  }, [clearSentryAudit]);
 
   const totalLiquidity = useMemo(
     () => tokens.reduce((s, t) => s + t.liquidity, 0),
@@ -41,6 +88,15 @@ export function DashboardPage() {
     () => tokens.filter((t) => t.risk_score === 'C' || t.risk_score === 'D').length,
     [tokens]
   );
+
+  const canLoadMore =
+    !loading &&
+    tokens.length >= fetchLimit &&
+    fetchLimit < DASH_FETCH_CAP;
+
+  const handleLoadMore = useCallback(() => {
+    setFetchLimit((n) => Math.min(n + pageStep, DASH_FETCH_CAP));
+  }, [pageStep]);
 
   const updatedStr =
     lastUpdate != null
@@ -61,26 +117,19 @@ export function DashboardPage() {
       >
         <label className="flex items-center gap-2.5 text-xs text-on-surface/70">
           <span className="shrink-0 font-headline uppercase tracking-wider">
-            {t('dashboard.rows')}
+            {t('dashboard.pageStep')}
           </span>
-          <div className="relative inline-flex items-center">
-            <select
-              value={limit}
-              onChange={(e) => setLimit(Number(e.target.value))}
-              aria-label={t('dashboard.rows')}
-              className="scheme-dark min-w-[3.75rem] cursor-pointer appearance-none rounded-md border border-primary/20 bg-surface-container-low py-[calc(0.25rem+2.5px)] pl-2.5 pr-7 font-headline text-xs font-semibold tabular-nums leading-none text-on-surface shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-[border-color,box-shadow,background-color] hover:border-primary/35 hover:bg-surface-container-high focus:border-primary-container/55 focus:bg-surface-container-high focus:outline-none focus:ring-2 focus:ring-primary-container/20 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={30}>30</option>
-              <option value={50}>50</option>
-            </select>
-            <MaterialIcon
-              name="expand_more"
-              className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-base text-primary-container/80"
-              aria-hidden
-            />
-          </div>
+          <CommandSelect
+            className="w-max min-w-[3.75rem] shrink-0"
+            value={String(pageStep)}
+            onChange={(e) => setPageStep(Number(e.target.value))}
+            aria-label={t('dashboard.pageStep')}
+          >
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={30}>30</option>
+            <option value={50}>50</option>
+          </CommandSelect>
         </label>
         <label className="flex items-center gap-2 text-xs text-on-surface/70">
           <input
@@ -124,9 +173,34 @@ export function DashboardPage() {
             tokens={tokens}
             loading={loading}
             searchQuery={searchQuery}
-            onSentryScan={setSelectedToken}
-            maxRows={limit}
+            category={feedCategory}
+            onCategoryChange={handleFeedCategoryChange}
+            onSentryScan={handleSentryScan}
+            sentryScanBusy={sentryLoading}
           />
+          <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-outline-variant/10 pt-4">
+            <button
+              type="button"
+              onClick={() => handleLoadMore()}
+              disabled={!canLoadMore}
+              className="rounded-sm border border-primary/30 bg-surface-container-high px-4 py-2 font-headline text-xs font-bold uppercase tracking-wider text-primary transition-colors hover:border-primary/50 hover:bg-surface-container-highest disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {t('dashboard.loadMore')}
+            </button>
+            <span className="text-[11px] text-on-surface/50">
+              {t('dashboard.loadedCount', {
+                n: tokens.length,
+                limit: fetchLimit,
+              })}
+            </span>
+            {!loading && !canLoadMore && tokens.length > 0 ? (
+              <span className="text-[11px] text-on-surface/35">
+                {fetchLimit >= DASH_FETCH_CAP
+                  ? t('dashboard.reachedFetchCap', { max: DASH_FETCH_CAP })
+                  : t('dashboard.noMoreToLoad')}
+              </span>
+            ) : null}
+          </div>
         </div>
 
         <div className="space-y-8">
@@ -135,11 +209,20 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {selectedToken && (
-        <div className="mt-10 max-w-3xl">
-          <TokenDetails token={selectedToken} />
-        </div>
-      )}
+      <SentryScanModal
+        open={sentryModalOpen}
+        onClose={closeSentryModal}
+        token={sentryModalToken}
+        loading={sentryLoading}
+        errorKey={sentryErrorKey}
+        score={sentryScore}
+        audit={sentryAuditData}
+        pair={sentryPair}
+        symbol={sentrySymbol}
+        displayName={sentryDisplayName}
+        liquidityUsd={sentryLiquidityUsd}
+        tableRows={sentryTableRows}
+      />
     </>
   );
 }

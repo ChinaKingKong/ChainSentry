@@ -5,6 +5,7 @@ import { MaterialIcon } from '../components/ui/MaterialIcon';
 import { useSentryAudit, type SentryCheckRow } from '../hooks/useSentryAudit';
 import { useTokens } from '../hooks/useTokens';
 import { formatUsdCompact } from '../lib/format';
+import { SENTRY_DEMO_SCORE } from '../lib/sentryDemo';
 import { riskToSentryScore } from '../lib/sentryScore';
 
 const CIRC = 2 * Math.PI * 45;
@@ -61,11 +62,12 @@ export function SentryPage() {
     };
   }, [t, i18n]);
 
+  const gaugeScore = score ?? SENTRY_DEMO_SCORE;
+
   const dashOffset = useMemo(() => {
-    if (score == null) return `0 ${CIRC}`;
-    const active = (score / 100) * CIRC;
+    const active = (gaugeScore / 100) * CIRC;
     return `${active} ${CIRC}`;
-  }, [score]);
+  }, [gaugeScore]);
 
   const meterSub = useMemo(() => {
     if (score == null) return t('sentryPage.secureLabel');
@@ -234,7 +236,9 @@ export function SentryPage() {
             </svg>
             <div className="absolute flex flex-col items-center">
               <span className="font-headline text-4xl font-bold text-secondary">
-                {score != null ? `${score}%` : '—'}
+                {audit != null && score != null
+                  ? `${score}%`
+                  : t('sentryPage.meterPct')}
               </span>
               <span className="font-label text-[10px] uppercase tracking-widest text-secondary">
                 {meterSub}
@@ -319,7 +323,7 @@ export function SentryPage() {
                   {t('sentryPage.taxTitle')}
                 </span>
                 <h4 className="mt-1 font-headline text-2xl font-bold text-on-surface">
-                  {audit ? t('sentryPage.taxHeading') : t('sentryPage.taxHeading')}
+                  {t('sentryPage.taxHeading')}
                 </h4>
               </div>
               <MaterialIcon name="percent" className="text-secondary" />

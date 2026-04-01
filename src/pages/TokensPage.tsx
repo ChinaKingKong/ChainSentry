@@ -1,10 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
+import { CommandSelect } from '../components/ui/CommandSelect';
 import { MaterialIcon } from '../components/ui/MaterialIcon';
+import { useClipboardCopy } from '../hooks/useClipboardCopy';
+import {
+  useJupiterSwapQuote,
+  type JupiterSwapDirection,
+} from '../hooks/useJupiterSwapQuote';
 import { usePairActivity } from '../hooks/usePairActivity';
 import { useTokens } from '../hooks/useTokens';
-import { TokenService } from '../services/api';
+import {
+  buildJupiterSwapUrl,
+  formatRawAsDecimal,
+  type JupiterPayAssetKey,
+} from '../services/jupiterQuote';
+import { getSolanaConnection } from '../services/solanaRpc';
+import { useSolanaWallet } from '../wallet/useSolanaWallet';
 import { formatTokenPrice, formatUsdCompact, shortenAddress } from '../lib/format';
 import { intlLocaleFor } from '../lib/intlLocale';
 import {
@@ -30,12 +42,27 @@ function barToneClass(tone: 'secondary' | 'error', part: 'bar' | 'wick') {
   return part === 'bar' ? 'bg-secondary/60' : 'bg-secondary';
 }
 
+/** 兑换区大数字：按字符长度缩小字号，避免与右侧代币选择器重叠 */
+function swapAmountFontClass(display: string): string {
+  const len = display.trim().length;
+  if (len === 0) return 'text-2xl';
+  if (len > 20) return 'text-sm leading-snug';
+  if (len > 15) return 'text-base leading-snug';
+  if (len > 12) return 'text-lg leading-snug';
+  return 'text-2xl';
+}
+
 export function TokensPage() {
   const { t, i18n } = useTranslation();
   const locale = intlLocaleFor(i18n.language);
   const [params, setParams] = useSearchParams();
   const mint = params.get('mint');
   const [tf, setTf] = useState<'1m' | '5m' | '1h' | '1d'>('1m');
+  const [payAmount, setPayAmount] = useState('1');
+  const [payAsset, setPayAsset] = useState<JupiterPayAssetKey>('SOL');
+  const [swapDir, setSwapDir] = useState<JupiterSwapDirection>('buy');
+  const { publicKey } = useSolanaWallet();
+  const [solBalanceSol, setSolBalanceSol] = useState<number | null>(null);
   const { tokens, loading } = useTokens(50, false, 0);
 
   useEffect(() => {
@@ -54,18 +81,39 @@ export function TokensPage() {
     return tokens[0];
   }, [mint, tokens]);
 
+  const jupiterQuote = useJupiterSwapQuote(
+    token?.address,
+    payAmount,
+    payAsset,
+    50,
+    swapDir
+  );
+
+  useEffect(() => {
+    if (!publicKey) {
+      setSolBalanceSol(null);
+      return;
+    }
+    let cancelled = false;
+    void getSolanaConnection()
+      .getBalance(publicKey)
+      .then((lamports) => {
+        if (!cancelled) setSolBalanceSol(lamports / 1e9);
+      })
+      .catch(() => {
+        if (!cancelled) setSolBalanceSol(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [publicKey]);
+
   const mcapApprox = token
     ? Math.max(token.liquidity * 2.2, token.volume_24h * 0.15)
     : 0;
   const fdvApprox = mcapApprox * 2.35;
 
-  const jupiterUrl = token
-    ? TokenService.getJupiterSwapUrl(token.address)
-    : 'https://jup.ag/';
-
-  const copyCa = () => {
-    if (token?.address) void navigator.clipboard.writeText(token.address);
-  };
+  const copyToClipboard = useClipboardCopy();
 
   const { rows: poolSigs, loading: poolSigLoading } = usePairActivity(
     token?.pair_address,
@@ -96,6 +144,41 @@ export function TokensPage() {
       </div>
     );
   }
+
+  const swapExecuteHref = buildJupiterSwapUrl(
+    jupiterQuote.inputMint,
+    jupiterQuote.outputMint,
+    jupiterQuote.rawInAmount > 0n ? jupiterQuote.rawInAmount : undefined
+  );
+
+  const stableBalanceRight =
+    publicKey && payAsset === 'SOL' && solBalanceSol != null
+      ? `${solBalanceSol.toLocaleString(locale, {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2,
+        })} SOL`
+      : publicKey && payAsset === 'USDC'
+        ? t('tokensPage.balanceUsdcHint')
+        : t('tokensPage.balanceUnknown');
+
+  const payBalanceRight =
+    swapDir === 'sell' ? t('tokensPage.balanceUnknown') : stableBalanceRight;
+
+  const receiveBalanceRight =
+    swapDir === 'buy' ? t('tokensPage.balanceUnknown') : stableBalanceRight;
+
+  const receiveAmountDisplay = jupiterQuote.loading
+    ? t('tokensPage.swapQuoteLoading')
+    : jupiterQuote.quote
+      ? formatRawAsDecimal(
+          jupiterQuote.quote.outAmount,
+          jupiterQuote.receiveDecimals,
+          locale,
+          { fractionDigits: 2 }
+        )
+      : t('tokensPage.balanceUnknown');
+
+  const receiveAmountClass = swapAmountFontClass(receiveAmountDisplay);
 
   const sym = token.symbol.slice(0, 6);
   const score = riskToSentryScore(token.risk_score);
@@ -137,7 +220,7 @@ export function TokensPage() {
             <div className="mt-2 flex flex-wrap items-center gap-4 font-label text-xs">
               <button
                 type="button"
-                onClick={copyCa}
+                onClick={() => void copyToClipboard(token.address)}
                 className="text-on-surface-variant flex items-center gap-1 transition-colors hover:text-primary"
               >
                 <MaterialIcon name="content_copy" className="text-sm" />
@@ -152,10 +235,13 @@ export function TokensPage() {
                 {t('tokensPage.liveFeed')}
               </span>
             </div>
-            <label className="mt-4 flex max-w-xs items-center gap-2 text-[10px] uppercase tracking-widest text-on-surface-variant">
-              {t('tokensPage.focusPair')}
-              <select
-                className="flex-1 rounded border border-outline-variant/20 bg-surface-container-low px-2 py-1.5 font-headline text-xs normal-case text-on-surface"
+            <label className="mt-4 flex flex-col gap-2 text-xs text-on-surface/70 sm:flex-row sm:items-center sm:gap-2.5">
+              <span className="shrink-0 font-headline uppercase tracking-wider">
+                {t('tokensPage.focusPair')}
+              </span>
+              <CommandSelect
+                className="w-max max-w-[11rem] shrink-0 sm:max-w-[12rem]"
+                aria-label={t('tokensPage.focusPair')}
                 value={token.address}
                 onChange={(e) => {
                   const v = e.target.value;
@@ -167,7 +253,7 @@ export function TokensPage() {
                     {x.symbol} · {shortenAddress(x.address, 3)}
                   </option>
                 ))}
-              </select>
+              </CommandSelect>
             </label>
           </div>
         </div>
@@ -333,8 +419,23 @@ export function TokensPage() {
                           <td className="px-6 py-4 text-on-surface-variant">
                             {timeStr}
                           </td>
-                          <td className="max-w-[140px] truncate px-6 py-4 font-mono text-[11px] text-on-surface">
-                            {short}
+                          <td className="max-w-[180px] px-6 py-4 font-mono text-[11px] text-on-surface">
+                            <span className="inline-flex max-w-full items-center gap-2 truncate">
+                              <span className="truncate">{short}</span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  void copyToClipboard(row.signature)
+                                }
+                                className="shrink-0 text-on-surface-variant transition-colors hover:text-primary"
+                                aria-label={t('tokensPage.copySignature')}
+                              >
+                                <MaterialIcon
+                                  name="content_copy"
+                                  className="text-sm"
+                                />
+                              </button>
+                            </span>
                           </td>
                           <td className="px-6 py-4 text-on-surface-variant">
                             {row.slot ?? '—'}
@@ -380,45 +481,137 @@ export function TokensPage() {
               <div className="border border-outline-variant/5 bg-surface-container-lowest p-4">
                 <div className="mb-2 flex justify-between font-label text-[10px] text-on-surface-variant">
                   <span>{t('tokensPage.youPay')}</span>
-                  <span>{t('tokensPage.balance')}</span>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-headline text-2xl font-bold text-on-surface">
-                    {(1).toLocaleString(locale)}
+                  <span className="max-w-[55%] truncate text-right">
+                    {t('tokensPage.balanceLabel')}{' '}
+                    <span className="text-on-surface/80">{payBalanceRight}</span>
                   </span>
-                  <div className="flex cursor-pointer items-center gap-2 bg-surface-container px-2 py-1">
-                    <span className="text-sm font-bold">SOL</span>
-                    <MaterialIcon name="expand_more" className="text-xs" />
-                  </div>
+                </div>
+                <div className="flex min-w-0 items-center justify-between gap-2">
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={payAmount}
+                    onChange={(e) => setPayAmount(e.target.value)}
+                    aria-label={
+                      swapDir === 'buy'
+                        ? t('tokensPage.youPay')
+                        : t('tokensPage.payTokenAmount', {
+                            symbol: token.symbol,
+                          })
+                    }
+                    className={`min-w-0 flex-1 border-0 bg-transparent font-headline font-bold text-on-surface outline-none ring-0 placeholder:text-outline/30 ${swapAmountFontClass(payAmount)}`}
+                    placeholder="0"
+                  />
+                  {swapDir === 'buy' ? (
+                    <>
+                      <label className="sr-only" htmlFor="swap-pay-asset">
+                        {t('tokensPage.swapPayAsset')}
+                      </label>
+                      <CommandSelect
+                        id="swap-pay-asset"
+                        size="md"
+                        className="shrink-0"
+                        aria-label={t('tokensPage.swapPayAsset')}
+                        value={payAsset}
+                        onChange={(e) =>
+                          setPayAsset(e.target.value as JupiterPayAssetKey)
+                        }
+                      >
+                        <option value="SOL">SOL</option>
+                        <option value="USDC">USDC</option>
+                      </CommandSelect>
+                    </>
+                  ) : (
+                    <div className="flex shrink-0 items-center rounded-md border border-primary/20 bg-surface-container-low px-3 py-1.5 font-headline text-sm font-bold text-on-surface shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+                      {token.symbol}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="relative z-10 -my-3 flex justify-center">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full border border-outline-variant/15 bg-surface-container text-primary">
-                  <MaterialIcon name="swap_vert" className="text-sm" />
-                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSwapDir((d) => (d === 'buy' ? 'sell' : 'buy'));
+                    setPayAmount('1');
+                  }}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-outline-variant/15 bg-surface-container text-primary transition-colors hover:border-primary/35 hover:bg-surface-container-high focus:outline-none focus:ring-2 focus:ring-primary-container/25"
+                  aria-label={t('tokensPage.swapFlipDirection')}
+                >
+                  <MaterialIcon name="swap_vert" className="text-sm" aria-hidden />
+                </button>
               </div>
               <div className="border border-outline-variant/5 bg-surface-container-lowest p-4">
                 <div className="mb-2 flex justify-between font-label text-[10px] text-on-surface-variant">
                   <span>{t('tokensPage.youReceive')}</span>
-                  <span>{t('tokensPage.balance')}</span>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-headline w-2/3 text-2xl font-bold text-primary">
-                    {t('hero.dash')}
+                  <span className="max-w-[55%] truncate text-right">
+                    {t('tokensPage.balanceLabel')}{' '}
+                    <span className="text-on-surface/80">
+                      {receiveBalanceRight}
+                    </span>
                   </span>
-                  <div className="flex cursor-pointer items-center gap-2 bg-surface-container px-2 py-1">
-                    <span className="text-sm font-bold">{token.symbol}</span>
-                    <MaterialIcon name="expand_more" className="text-xs" />
-                  </div>
                 </div>
+                <div className="flex min-w-0 items-center justify-between gap-2">
+                  <span
+                    className={`font-headline min-w-0 flex-1 font-bold tabular-nums ${receiveAmountClass} ${jupiterQuote.quote ? 'text-primary' : 'text-on-surface-variant'}`}
+                  >
+                    {receiveAmountDisplay}
+                  </span>
+                  {swapDir === 'buy' ? (
+                    <div className="flex shrink-0 items-center rounded-md border border-primary/20 bg-surface-container-low px-3 py-1.5 font-headline text-sm font-bold text-on-surface shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+                      {token.symbol}
+                    </div>
+                  ) : (
+                    <>
+                      <label className="sr-only" htmlFor="swap-receive-asset">
+                        {t('tokensPage.swapReceiveAsset')}
+                      </label>
+                      <CommandSelect
+                        id="swap-receive-asset"
+                        size="md"
+                        className="shrink-0"
+                        aria-label={t('tokensPage.swapReceiveAsset')}
+                        value={payAsset}
+                        onChange={(e) =>
+                          setPayAsset(e.target.value as JupiterPayAssetKey)
+                        }
+                      >
+                        <option value="SOL">SOL</option>
+                        <option value="USDC">USDC</option>
+                      </CommandSelect>
+                    </>
+                  )}
+                </div>
+                {jupiterQuote.error === 'invalid_amount' ? (
+                  <p className="mt-2 font-label text-[10px] text-error">
+                    {t('tokensPage.swapInvalidAmount')}
+                  </p>
+                ) : null}
+                {jupiterQuote.error === 'no_route' && !jupiterQuote.loading ? (
+                  <p className="mt-2 font-label text-[10px] text-error">
+                    {t('tokensPage.swapNoRoute')}
+                  </p>
+                ) : null}
               </div>
               <div className="pt-2">
-                <div className="mb-4 flex justify-between px-1 font-label text-[10px]">
-                  <span className="text-on-surface-variant">{t('tokensPage.routeJupiter')}</span>
+                <div className="mb-2 flex flex-wrap justify-between gap-x-4 gap-y-1 px-1 font-label text-[10px]">
+                  <span className="text-on-surface-variant">
+                    {t('tokensPage.routeJupiter')}
+                  </span>
                   <span className="text-secondary">{t('tokensPage.slippage')}</span>
                 </div>
+                {jupiterQuote.quote && !jupiterQuote.loading ? (
+                  <p className="mb-3 px-1 font-label text-[10px] text-on-surface-variant">
+                    {t('tokensPage.swapPriceImpact', {
+                      p: Number(jupiterQuote.quote.priceImpactPct).toLocaleString(
+                        locale,
+                        { maximumFractionDigits: 2 }
+                      ),
+                    })}
+                  </p>
+                ) : null}
                 <a
-                  href={jupiterUrl}
+                  href={swapExecuteHref}
                   target="_blank"
                   rel="noreferrer"
                   className="block w-full bg-primary py-4 text-center font-headline text-sm font-bold uppercase tracking-widest text-on-primary shadow-[0_0_20px_rgba(34,211,238,0.2)] transition-all hover:brightness-110"

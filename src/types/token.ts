@@ -2,6 +2,9 @@
  * Token 类型定义
  */
 
+/** 指挥台热门表：MEME / DeFi / LST 数据源切换 */
+export type TokenFeedCategory = 'meme' | 'defi' | 'lst';
+
 export interface Token {
   symbol: string;
   name: string;
