@@ -46,56 +46,92 @@ export function AppLayout() {
   };
 
   return (
+    /* Win2k desktop — teal background */
     <div className="flex h-dvh max-h-dvh flex-col overflow-hidden bg-background text-on-surface">
-      <div
-        className="pointer-events-none fixed left-0 top-0 z-0 h-32 w-32 border-l border-t border-primary/20"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none fixed bottom-0 right-0 z-0 h-32 w-32 border-r border-b border-primary/20"
-        aria-hidden
-      />
 
-      {/* 参照 Hero 流动性卡：右下角钱币装饰底图 + 渐变融入背景 */}
-      <div
-        className="pointer-events-none fixed bottom-0 right-0 z-0 overflow-hidden"
+      {/* Win2k application window frame */}
+      <div className="flex flex-1 flex-col overflow-hidden m-0 md:m-2"
         style={{
-          width: 'min(48vw, 440px)',
-          height: 'min(48vh, 440px)',
+          border: '2px solid #FFFFFF',
+          borderRightColor: '#808080',
+          borderBottomColor: '#808080',
+          backgroundColor: '#D4D0C8',
         }}
-        aria-hidden
       >
-        <div
-          className="absolute inset-0 bg-contain bg-right-bottom bg-no-repeat opacity-[0.16]" 
+        {/* Window title bar */}
+        <div className="win-titlebar shrink-0 flex items-center justify-between pr-1">
+          <div className="flex items-center gap-1.5">
+            {/* App icon placeholder */}
+            <div
+              className="flex h-4 w-4 shrink-0 items-center justify-center text-[9px] font-bold"
+              style={{ background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.4)' }}
+              aria-hidden
+            >
+              S
+            </div>
+            <span style={{ fontSize: '11px', fontWeight: 'bold' }}>
+              ChainSentry — Solana Dashboard
+            </span>
+          </div>
+          {/* Title bar controls */}
+          <div className="flex items-center gap-0.5" aria-hidden>
+            {['_', '□', '✕'].map((c) => (
+              <div
+                key={c}
+                className="win-btn flex h-4 w-5 items-center justify-center text-[10px] font-bold leading-none"
+                style={{ padding: '0', minWidth: '18px', height: '14px' }}
+              >
+                {c}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Menu bar */}
+        <TopNav
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          activityIndex={activityIndex}
+          rpcConnected={rpcConnected}
+          showSearch={showSearch}
+          showRouteLinks
         />
-        <div className="absolute inset-0 bg-gradient-to-tl from-background from-[22%] via-background/88 to-transparent" />
-      </div>
 
-      <TopNav
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        activityIndex={activityIndex}
-        rpcConnected={rpcConnected}
-        showSearch={showSearch}
-        showRouteLinks
-      />
+        {/* App body */}
+        <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+          <SideNav nodeActive={rpcConnected} slotDisplay={slotDisplay} />
+          <main
+            id="app-main-scroll"
+            className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain p-3 pb-24 md:p-4 md:pb-8"
+            style={{ backgroundColor: '#ECE9D8' }}
+          >
+            <Outlet
+              context={
+                {
+                  searchQuery,
+                  activityIndex,
+                  rpcConnected,
+                } satisfies AppOutletContext
+              }
+            />
+          </main>
+        </div>
 
-      <div className="flex min-h-0 min-w-0 flex-1">
-        <SideNav nodeActive={rpcConnected} slotDisplay={slotDisplay} />
-        <main
-          id="app-main-scroll"
-          className="max-w-[1600px] min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-6 pb-36 md:px-6 md:py-10 md:pb-10 lg:px-10"
+        {/* Win2k status bar at bottom */}
+        <div
+          className="win-statusbar shrink-0 flex items-center gap-2"
+          style={{ borderTop: '2px solid #808080' }}
         >
-          <Outlet
-            context={
-              {
-                searchQuery,
-                activityIndex,
-                rpcConnected,
-              } satisfies AppOutletContext
-            }
-          />
-        </main>
+          <span className="win-statusbar-cell">
+            {rpcConnected ? '🟢 Connected' : '🔴 Disconnected'}
+          </span>
+          <span className="win-statusbar-cell">
+            Slot: {slotDisplay}
+          </span>
+          <span className="win-statusbar-cell ml-auto">
+            ChainSentry v2.0
+          </span>
+        </div>
       </div>
 
       <MobileBottomNav />

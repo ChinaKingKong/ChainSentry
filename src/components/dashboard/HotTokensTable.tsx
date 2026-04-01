@@ -16,9 +16,7 @@ export type HotTokensTableProps = {
   category: TokenFeedCategory;
   onCategoryChange: (c: TokenFeedCategory) => void;
   onSentryScan: (token: Token) => void | Promise<void>;
-  /** 哨兵分析进行中时禁用扫描按钮，避免重复请求 */
   sentryScanBusy?: boolean;
-  /** 不传则展示当前传入的全部 tokens（仅受搜索过滤） */
   maxRows?: number;
 };
 
@@ -55,118 +53,237 @@ export function HotTokensTable({
   }, [tokens, searchQuery, maxRows]);
 
   return (
-    <div>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <h3 className="font-headline flex items-center gap-2 text-xl font-bold text-on-surface">
-          <MaterialIcon name="local_fire_department" className="text-primary" />
-          {t('hotTable.title')}
-        </h3>
-        <div className="flex flex-wrap gap-2">
-          {CATS.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => onCategoryChange(c.id)}
-              className={`rounded px-3 py-1 text-[10px] font-bold uppercase tracking-widest transition-colors ${
-                category === c.id
-                  ? 'bg-surface-container-high text-primary'
-                  : 'text-on-surface/40 hover:text-on-surface'
-              }`}
-            >
-              {t(c.labelKey)}
-            </button>
-          ))}
-        </div>
+    <div
+      style={{
+        border: '2px solid #FFFFFF',
+        borderRightColor: '#808080',
+        borderBottomColor: '#808080',
+        backgroundColor: '#D4D0C8',
+      }}
+    >
+      {/* Win2k window title bar */}
+      <div
+        className="win-titlebar"
+        style={{ fontSize: '11px', padding: '3px 8px' }}
+      >
+        <MaterialIcon name="local_fire_department" />
+        <span>{t('hotTable.title')}</span>
       </div>
 
+      {/* Toolbar — category tabs as Win2k push buttons */}
+      <div
+        className="flex items-center gap-1 px-2 py-1.5 flex-wrap"
+        style={{
+          backgroundColor: '#D4D0C8',
+          borderBottom: '1px solid #808080',
+        }}
+      >
+        <span className="text-[11px] font-bold mr-1" style={{ color: '#000080' }}>
+          Category:
+        </span>
+        {CATS.map((c) => (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => onCategoryChange(c.id)}
+            className="win-btn text-[11px]"
+            style={
+              category === c.id
+                ? {
+                    borderTopColor: '#808080',
+                    borderLeftColor: '#808080',
+                    borderRightColor: '#FFFFFF',
+                    borderBottomColor: '#FFFFFF',
+                    backgroundColor: '#C0C0C0',
+                    fontWeight: 'bold',
+                    color: '#000080',
+                  }
+                : {}
+            }
+          >
+            {t(c.labelKey)}
+          </button>
+        ))}
+      </div>
+
+      {/* Table body */}
       {loading ? (
-        <div className="flex min-h-[200px] items-center justify-center rounded bg-surface-container-low/80 p-12 text-on-surface/50">
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary-container border-t-transparent" />
-            <span className="font-headline text-sm">{t('hotTable.syncing')}</span>
+        <div
+          className="flex min-h-[160px] items-center justify-center text-[11px]"
+          style={{ color: '#444444', backgroundColor: '#FFFFFF' }}
+        >
+          <div
+            className="flex items-center gap-2 px-4 py-2"
+            style={{
+              border: '2px solid #808080',
+              borderRightColor: '#FFFFFF',
+              borderBottomColor: '#FFFFFF',
+              backgroundColor: '#D4D0C8',
+            }}
+          >
+            <div
+              className="h-4 w-4 animate-spin rounded-full"
+              style={{
+                border: '2px solid #808080',
+                borderTopColor: '#000080',
+              }}
+            />
+            <span>{t('hotTable.syncing')}</span>
           </div>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="rounded border border-outline-variant/10 bg-surface-container-low/80 px-6 py-14 text-center text-on-surface/55">
-          <p className="font-headline text-sm">{t('hotTable.noMatch')}</p>
+        <div
+          className="px-6 py-10 text-center text-[11px]"
+          style={{ backgroundColor: '#FFFFFF', color: '#444444' }}
+        >
+          <p className="font-bold">{t('hotTable.noMatch')}</p>
           {searchQuery.trim() ? (
-            <p className="mt-2 text-xs text-on-surface/40">
-              {t('hotTable.clearSearchHint')}
-            </p>
+            <p className="mt-1 text-[10px]">{t('hotTable.clearSearchHint')}</p>
           ) : null}
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-left">
+        <div
+          className="overflow-x-auto"
+          style={{
+            border: '2px inset',
+            borderTopColor: '#808080',
+            borderLeftColor: '#808080',
+            borderRightColor: '#FFFFFF',
+            borderBottomColor: '#FFFFFF',
+            backgroundColor: '#FFFFFF',
+          }}
+        >
+          <table
+            className="w-full border-collapse text-left"
+            style={{ fontSize: '11px', backgroundColor: '#FFFFFF' }}
+          >
             <thead>
-              <tr className="border-b border-outline-variant/10 text-[10px] uppercase tracking-widest text-on-surface/40">
-                <th className="pb-4 font-bold">{t('hotTable.asset')}</th>
-                <th className="pb-4 font-bold">{t('hotTable.price')}</th>
-                <th className="pb-4 font-bold">{t('hotTable.vol24h')}</th>
-                <th className="pb-4 font-bold">{t('hotTable.sentryScore')}</th>
-                <th className="pb-4 font-bold">{t('hotTable.action')}</th>
+              <tr
+                style={{
+                  backgroundColor: '#D4D0C8',
+                  borderBottom: '2px solid #808080',
+                }}
+              >
+                {[
+                  t('hotTable.asset'),
+                  t('hotTable.price'),
+                  t('hotTable.vol24h'),
+                  t('hotTable.sentryScore'),
+                  t('hotTable.action'),
+                ].map((col) => (
+                  <th
+                    key={col}
+                    className="px-3 py-1.5 font-bold text-left text-[11px]"
+                    style={{
+                      color: '#000000',
+                      borderRight: '1px solid #FFFFFF',
+                      borderBottom: '2px solid #808080',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {col}
+                  </th>
+                ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-outline-variant/5">
-              {filtered.map((token) => {
+            <tbody>
+              {filtered.map((token, idx) => {
                 const score = riskToSentryScore(token.risk_score);
-                const barColor = sentryScoreBarColor(score);
-                const textColor = sentryScoreTextColor(score);
+                // Map score to classic Win2k green/yellow/red
+                const scoreColor =
+                  score >= 70 ? '#008000' : score >= 40 ? '#808000' : '#CC0000';
+                const isEven = idx % 2 === 0;
+
                 return (
                   <tr
                     key={token.address}
-                    className="group transition-colors hover:bg-surface-container-low/80"
+                    style={{ backgroundColor: isEven ? '#FFFFFF' : '#F5F5F5' }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLTableRowElement).style.backgroundColor = '#000080';
+                      Array.from((e.currentTarget as HTMLTableRowElement).cells).forEach(
+                        (td) => { td.style.color = '#FFFFFF'; }
+                      );
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLTableRowElement).style.backgroundColor = isEven ? '#FFFFFF' : '#F5F5F5';
+                      Array.from((e.currentTarget as HTMLTableRowElement).cells).forEach(
+                        (td) => { td.style.color = ''; }
+                      );
+                    }}
                   >
-                    <td className="py-5">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded bg-surface-container-highest">
-                          <span className="font-headline text-sm font-bold text-primary">
-                            {token.symbol.slice(0, 2).toUpperCase()}
-                          </span>
+                    <td className="px-3 py-1.5">
+                      <div className="flex items-center gap-2">
+                        {/* Token icon — Win2k list icon style */}
+                        <div
+                          className="flex h-6 w-6 shrink-0 items-center justify-center text-[9px] font-bold"
+                          style={{
+                            backgroundColor: '#C0C0C0',
+                            border: '1px solid #808080',
+                            borderRightColor: '#FFFFFF',
+                            borderBottomColor: '#FFFFFF',
+                            color: '#000080',
+                          }}
+                        >
+                          {token.symbol.slice(0, 2).toUpperCase()}
                         </div>
                         <div>
-                          <p className="font-headline text-sm font-bold tracking-tight text-on-surface">
-                            {token.symbol}
-                          </p>
-                          <p className="font-mono text-[10px] text-on-surface/40">
+                          <p className="font-bold text-[11px]">{token.symbol}</p>
+                          <p className="text-[9px]" style={{ color: '#666666', fontFamily: 'Courier New, monospace' }}>
                             {shortenAddress(token.address)}
                           </p>
                         </div>
                       </div>
                     </td>
-                    <td className="py-5 font-headline font-medium text-on-surface">
+                    <td className="px-3 py-1.5 font-bold text-[11px]">
                       {formatTokenPrice(token.price)}{' '}
                       <span
-                        className={`ml-1 text-xs ${
-                          token.change_24h >= 0 ? 'text-secondary' : 'text-error'
-                        }`}
+                        style={{
+                          color: token.change_24h >= 0 ? '#008000' : '#CC0000',
+                          fontSize: '10px',
+                        }}
                       >
                         {token.change_24h >= 0 ? '+' : ''}
                         {token.change_24h.toFixed(1)}%
                       </span>
                     </td>
-                    <td className="py-5 font-headline text-on-surface">
+                    <td className="px-3 py-1.5 text-[11px]">
                       {formatUsdCompact(token.volume_24h)}
                     </td>
-                    <td className="py-5">
+                    <td className="px-3 py-1.5">
+                      {/* Win2k progress bar */}
                       <div className="flex items-center gap-2">
-                        <div className="h-1 w-12 overflow-hidden rounded-full bg-surface-container-highest">
+                        <div
+                          className="w-14 h-3 overflow-hidden"
+                          style={{
+                            border: '1px solid #808080',
+                            borderRightColor: '#FFFFFF',
+                            borderBottomColor: '#FFFFFF',
+                            backgroundColor: '#FFFFFF',
+                          }}
+                        >
                           <div
-                            className={`h-full ${barColor}`}
-                            style={{ width: `${score}%` }}
+                            className="h-full"
+                            style={{
+                              width: `${score}%`,
+                              backgroundColor: scoreColor,
+                            }}
                           />
                         </div>
-                        <span className={`text-xs font-bold ${textColor}`}>
+                        <span
+                          className="text-[11px] font-bold w-6 text-right"
+                          style={{ color: scoreColor }}
+                        >
                           {score}
                         </span>
                       </div>
                     </td>
-                    <td className="py-5">
+                    <td className="px-3 py-1.5">
                       <button
                         type="button"
                         disabled={sentryScanBusy}
                         onClick={() => void onSentryScan(token)}
-                        className="rounded border border-primary/20 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-primary transition-all hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-45"
+                        className="win-btn text-[10px]"
+                        style={{ color: '#000080', fontWeight: 'bold' }}
                       >
                         {t('hotTable.sentryScan')}
                       </button>

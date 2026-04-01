@@ -10,14 +10,45 @@ export type HeroStatsRowProps = {
   rpcLive: boolean;
 };
 
-const pulseBars = [
-  'h-[60%] bg-primary-container/20',
-  'h-[40%] bg-primary-container/20',
-  'h-[80%] bg-primary-container/40',
-  'h-[50%] bg-primary-container/30',
-  'h-[90%] bg-primary-container/60',
-  'h-full bg-primary-container',
-];
+/** Win2k group-box stat card */
+function StatCard({
+  title,
+  children,
+  accentColor,
+}: {
+  title: string;
+  children: React.ReactNode;
+  accentColor?: string;
+}) {
+  return (
+    <div
+      style={{
+        backgroundColor: '#D4D0C8',
+        border: '2px solid #FFFFFF',
+        borderRightColor: '#808080',
+        borderBottomColor: '#808080',
+        padding: '0',
+      }}
+    >
+      {/* Card title bar */}
+      <div
+        className="win-titlebar"
+        style={{
+          background: accentColor
+            ? `linear-gradient(to right, ${accentColor}, ${accentColor}aa)`
+            : 'linear-gradient(to right, #000080, #1084D0)',
+          fontSize: '11px',
+          padding: '3px 8px',
+        }}
+      >
+        {title}
+      </div>
+      <div style={{ padding: '10px 12px' }}>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 export function HeroStatsRow({
   activityIndex,
@@ -46,86 +77,145 @@ export function HeroStatsRow({
       : t('hero.dash');
 
   return (
-    <div className="mb-10 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-      <div className="group relative overflow-hidden rounded bg-surface-container-low p-6">
-        <div className="scanline" />
-        <div className="mb-6 flex items-start justify-between">
+    <div className="mb-3 grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
+      {/* Card 1: Network TPS */}
+      <StatCard title={t('hero.networkTps')}>
+        <div className="flex items-start justify-between mb-3">
           <div>
-            <p className="mb-1 font-label text-[10px] uppercase tracking-widest text-primary/70">
-              {t('hero.networkTps')}
-            </p>
-            <h2 className="font-headline text-4xl font-bold text-on-surface">
+            <div
+              className="font-bold"
+              style={{ fontSize: '28px', lineHeight: 1.1, color: '#000080', fontFamily: 'Tahoma, sans-serif' }}
+            >
               {mainNumber}
-            </h2>
-            <p className="mt-1 text-[10px] text-on-surface/40">
+            </div>
+            <div className="text-[10px] mt-1" style={{ color: '#444444' }}>
               {t('hero.slotDerived')}
-            </p>
+            </div>
           </div>
-          <div className="flex items-center gap-2 rounded-full bg-secondary/10 px-2 py-1">
-            <span className="relative flex h-2 w-2">
-              {rpcLive && (
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-secondary opacity-75" />
-              )}
-              <span
-                className={`relative inline-flex h-2 w-2 rounded-full ${rpcLive ? 'bg-secondary' : 'bg-error'}`}
-              />
-            </span>
-            <span className="text-[10px] font-bold uppercase tracking-tighter text-secondary">
-              {rpcLive ? t('hero.live') : t('hero.stale')}
-            </span>
+          {/* RPC live indicator — Win2k LED style */}
+          <div
+            className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold"
+            style={{
+              border: '1px solid #808080',
+              borderRightColor: '#FFFFFF',
+              borderBottomColor: '#FFFFFF',
+              backgroundColor: '#C0C0C0',
+              color: rpcLive ? '#008000' : '#CC0000',
+            }}
+          >
+            <span
+              className="inline-block h-2 w-2 rounded-full"
+              style={{ backgroundColor: rpcLive ? '#00CC00' : '#CC0000' }}
+              aria-hidden
+            />
+            {rpcLive ? t('hero.live') : t('hero.stale')}
           </div>
         </div>
-        <div className="flex h-12 items-end gap-1">
-          {pulseBars.map((cls, i) => (
-            <div key={i} className={`w-full rounded-t-sm ${cls}`} />
+
+        {/* Classic Win2k progress-bar style activity bars */}
+        <div
+          className="flex h-6 items-end gap-px overflow-hidden"
+          style={{
+            border: '2px solid #808080',
+            borderRightColor: '#FFFFFF',
+            borderBottomColor: '#FFFFFF',
+            backgroundColor: '#FFFFFF',
+            padding: '1px',
+          }}
+        >
+          {[20, 40, 30, 60, 50, 80, 70, 100, 90, 75, 85, 65].map((pct, i) => (
+            <div
+              key={i}
+              className="flex-1"
+              style={{
+                height: `${pct}%`,
+                backgroundColor: '#000080',
+              }}
+            />
           ))}
         </div>
-      </div>
+      </StatCard>
 
-      <div className="relative overflow-hidden rounded bg-surface-container-low p-6">
-        {/* 左侧压暗保正文；右侧透明，否则渐变会把右下角钱币完全盖住 */}
+      {/* Card 2: Liquidity */}
+      <StatCard title={t('hero.liquidityTracked')}>
         <div
-          className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-r from-surface-container-low from-[0%] via-surface-container-low/96 via-[48%] to-transparent"
-          aria-hidden
-        />
-        {/* 小区域贴右下角，避免整卡 bg-contain 把钱币放得过大 */}
-        <div
-          className="pointer-events-none absolute bottom-0 right-0 z-[1] h-[5rem] w-[11.5rem] max-w-[52%] bg-no-repeat opacity-[0.38] sm:h-[5.75rem] sm:w-[13.5rem]"
-          aria-hidden
-        />
-        <div className="relative z-10">
-          <p className="mb-1 font-label text-[10px] uppercase tracking-widest text-primary/70">
-            {t('hero.liquidityTracked')}
-          </p>
-          <h2 className="font-headline text-4xl font-bold text-on-surface">
-            {liquidityLabel}
-          </h2>
-          <div className="mt-4 flex items-center gap-2">
-            <MaterialIcon name="trending_up" className="text-sm text-secondary" />
-            <span className="text-xs font-medium text-secondary">
-              {changeLine}
-            </span>
-          </div>
+          className="font-bold mb-2"
+          style={{ fontSize: '28px', lineHeight: 1.1, color: '#000080', fontFamily: 'Tahoma, sans-serif' }}
+        >
+          {liquidityLabel}
         </div>
-      </div>
-
-      <div className="relative overflow-hidden rounded border-l-2 border-tertiary-container bg-surface-container-low p-6">
-        <p className="mb-1 font-label text-[10px] uppercase tracking-widest text-tertiary-container">
-          {t('hero.highRisk')}
-        </p>
-        <h2 className="font-headline text-4xl font-bold text-on-surface">
-          {highRiskCount}
-        </h2>
-        <p className="mt-4 text-xs italic text-on-surface/50">
-          {t('hero.highRiskHint')}
-        </p>
-        <div className="absolute right-6 top-6">
+        <div
+          className="flex items-center gap-1 text-[11px]"
+          style={{ color: liquidityChangePct != null && liquidityChangePct >= 0 ? '#008000' : '#CC0000' }}
+        >
           <MaterialIcon
-            name="warning"
-            className="animate-pulse text-tertiary-container"
+            name={liquidityChangePct != null && liquidityChangePct >= 0 ? 'arrow_upward' : 'arrow_downward'}
+          />
+          <span className="font-bold">{changeLine}</span>
+        </div>
+
+        {/* Win2k inset progress bar */}
+        <div
+          className="mt-3 h-3"
+          style={{
+            border: '2px solid #808080',
+            borderRightColor: '#FFFFFF',
+            borderBottomColor: '#FFFFFF',
+            backgroundColor: '#FFFFFF',
+            padding: '1px',
+          }}
+        >
+          <div
+            className="h-full"
+            style={{
+              width: liquidityChangePct != null ? `${Math.min(Math.abs(liquidityChangePct) * 5, 100)}%` : '30%',
+              backgroundColor: '#000080',
+            }}
           />
         </div>
-      </div>
+      </StatCard>
+
+      {/* Card 3: High Risk — warning accent */}
+      <StatCard title={t('hero.highRisk')} accentColor="#CC0000">
+        <div className="flex items-start justify-between">
+          <div>
+            <div
+              className="font-bold"
+              style={{ fontSize: '28px', lineHeight: 1.1, color: '#CC0000', fontFamily: 'Tahoma, sans-serif' }}
+            >
+              {highRiskCount}
+            </div>
+            <p className="mt-2 text-[11px] italic" style={{ color: '#444444' }}>
+              {t('hero.highRiskHint')}
+            </p>
+          </div>
+          {/* Warning icon with Win2k dialog icon look */}
+          <div
+            className="flex h-10 w-10 items-center justify-center shrink-0"
+            style={{
+              backgroundColor: '#FFFF00',
+              border: '2px solid #808080',
+              borderRightColor: '#FFFFFF',
+              borderBottomColor: '#FFFFFF',
+            }}
+          >
+            <MaterialIcon name="warning" className="text-on-surface" style={{ color: '#000000', fontSize: '20px !important' }} />
+          </div>
+        </div>
+
+        {/* Simulated Win2k alert bar */}
+        <div
+          className="mt-3 flex items-center gap-2 px-2 py-1 text-[10px]"
+          style={{
+            backgroundColor: '#FFF0C0',
+            border: '1px solid #808080',
+            color: '#664400',
+          }}
+        >
+          <MaterialIcon name="info" />
+          Tokens rated C or D grade
+        </div>
+      </StatCard>
     </div>
   );
 }
