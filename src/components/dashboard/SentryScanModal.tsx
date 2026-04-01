@@ -79,6 +79,15 @@ export function SentryScanModal({
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
   const gaugeScore =
     audit != null && score != null ? score : 0;
 
@@ -102,7 +111,7 @@ export function SentryScanModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[100] flex flex-col md:items-center md:justify-center md:p-4"
       role="presentation"
     >
       <button
@@ -115,19 +124,19 @@ export function SentryScanModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="sentry-scan-modal-title"
-        className="relative z-10 flex max-h-[min(90vh,720px)] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-outline-variant/20 bg-surface-container-low shadow-[0_24px_80px_-20px_rgba(0,0,0,0.85)]"
+        className="relative z-10 flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-surface-container-low shadow-[0_24px_80px_-20px_rgba(0,0,0,0.85)] max-md:max-h-[100dvh] max-md:rounded-none md:max-h-[min(90vh,720px)] md:max-w-2xl md:flex-none md:rounded-lg md:border md:border-outline-variant/20"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-3 border-b border-outline-variant/15 px-5 py-4">
-          <div className="min-w-0">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-outline-variant/15 bg-surface-container-low px-4 py-3 sm:px-5 sm:py-4">
+          <div className="min-w-0 pr-2">
             <h2
               id="sentry-scan-modal-title"
-              className="font-headline text-lg font-bold text-on-surface"
+              className="font-headline text-base font-bold text-on-surface sm:text-lg"
             >
               {t('dashboard.sentryModalTitle')}
             </h2>
             {token ? (
-              <p className="mt-1 truncate text-sm text-on-surface-variant">
+              <p className="mt-1 line-clamp-2 text-xs text-on-surface-variant sm:text-sm">
                 <span className="font-semibold text-primary">{token.symbol}</span>
                 <span className="text-on-surface/50"> · </span>
                 {token.name}
@@ -137,16 +146,16 @@ export function SentryScanModal({
           <button
             type="button"
             onClick={onClose}
-            className="shrink-0 rounded border border-outline-variant/30 p-2 text-on-surface-variant transition-colors hover:border-primary/40 hover:text-primary"
+            className="touch-manipulation flex h-11 w-11 shrink-0 items-center justify-center rounded border border-outline-variant/30 text-on-surface-variant transition-colors hover:border-primary/40 hover:text-primary sm:h-9 sm:w-9"
             aria-label={t('dashboard.sentryModalClose')}
           >
-            <MaterialIcon name="close" />
+            <MaterialIcon name="close" className="text-[22px] sm:text-xl" />
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
           {loading ? (
-            <div className="flex flex-col items-center justify-center gap-6 px-6 py-16">
+            <div className="flex flex-col items-center justify-center gap-6 px-4 py-12 sm:px-6 sm:py-16">
               <div className="relative flex h-28 w-28 items-center justify-center">
                 <div
                   className="absolute inset-0 rounded-full border-2 border-primary/15 border-t-primary animate-spin"
@@ -176,15 +185,15 @@ export function SentryScanModal({
               </div>
             </div>
           ) : errMsg ? (
-            <div className="px-5 py-8">
+            <div className="px-4 py-6 sm:px-5 sm:py-8">
               <div className="rounded border border-error/40 bg-error/10 px-4 py-3 text-sm text-error">
                 {errMsg}
               </div>
             </div>
           ) : (
-            <div className="space-y-6 px-5 py-6">
+            <div className="space-y-5 px-4 py-4 sm:space-y-6 sm:px-5 sm:py-6">
               <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:justify-center">
-                <div className="relative flex h-44 w-44 shrink-0 items-center justify-center">
+                <div className="relative flex h-[9.5rem] w-[9.5rem] shrink-0 items-center justify-center sm:h-44 sm:w-44">
                   <svg
                     className="h-full w-full -rotate-90"
                     viewBox="0 0 100 100"
@@ -224,7 +233,7 @@ export function SentryScanModal({
                     </defs>
                   </svg>
                   <div className="absolute flex flex-col items-center">
-                    <span className="font-headline text-3xl font-bold text-secondary">
+                    <span className="font-headline text-2xl font-bold text-secondary sm:text-3xl">
                       {audit != null && score != null
                         ? `${score}%`
                         : t('hero.dash')}
@@ -234,7 +243,7 @@ export function SentryScanModal({
                     </span>
                   </div>
                 </div>
-                <div className="max-w-sm flex-1 text-center sm:text-left">
+                <div className="w-full max-w-sm flex-1 text-center sm:text-left">
                   <p className="font-label text-[10px] uppercase tracking-widest text-outline">
                     {t('sentryPage.tokenPrefix')}{' '}
                     <span className="text-primary">
@@ -256,10 +265,10 @@ export function SentryScanModal({
                       <button
                         type="button"
                         onClick={() => void copyToClipboard(mintToCopy)}
-                        className="shrink-0 text-on-surface-variant transition-colors hover:text-primary"
+                        className="touch-manipulation shrink-0 rounded p-2 text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-primary active:bg-surface-container-highest"
                         aria-label={t('tokensPage.copyMint')}
                       >
-                        <MaterialIcon name="content_copy" className="text-base" />
+                        <MaterialIcon name="content_copy" className="text-lg sm:text-base" />
                       </button>
                     ) : null}
                   </div>
@@ -272,17 +281,17 @@ export function SentryScanModal({
               </div>
 
               {tableRows.length > 0 ? (
-                <div className="overflow-hidden rounded border border-outline-variant/10">
-                  <table className="w-full border-collapse text-left text-sm">
+                <div className="-mx-1 overflow-x-auto rounded border border-outline-variant/10 sm:mx-0">
+                  <table className="w-full min-w-[520px] border-collapse text-left text-sm">
                     <thead>
                       <tr className="bg-surface-container-highest/80">
-                        <th className="px-3 py-2 font-label text-[10px] uppercase tracking-wider text-outline">
+                        <th className="whitespace-nowrap px-2 py-2 font-label text-[9px] uppercase tracking-wider text-outline sm:px-3 sm:text-[10px]">
                           {t('sentryPage.colCheck')}
                         </th>
-                        <th className="px-3 py-2 font-label text-[10px] uppercase tracking-wider text-outline">
+                        <th className="whitespace-nowrap px-2 py-2 font-label text-[9px] uppercase tracking-wider text-outline sm:px-3 sm:text-[10px]">
                           {t('sentryPage.colStatus')}
                         </th>
-                        <th className="px-3 py-2 font-label text-[10px] uppercase tracking-wider text-outline">
+                        <th className="px-2 py-2 font-label text-[9px] uppercase tracking-wider text-outline sm:px-3 sm:text-[10px]">
                           {t('sentryPage.colEvidence')}
                         </th>
                       </tr>
@@ -292,20 +301,20 @@ export function SentryScanModal({
                         const ui = rowStatusUi(row, t);
                         return (
                           <tr key={row.id} className="bg-surface-container/40">
-                            <td className="px-3 py-2.5 font-medium text-on-surface">
+                            <td className="max-w-[140px] whitespace-normal break-words px-2 py-2 text-xs font-medium text-on-surface sm:max-w-none sm:px-3 sm:py-2.5 sm:text-sm">
                               {t(`sentryPage.${row.labelKey}`)}
                             </td>
-                            <td className="px-3 py-2.5">
+                            <td className="whitespace-nowrap px-2 py-2 sm:px-3 sm:py-2.5">
                               <span
-                                className={`inline-flex items-center gap-1.5 font-label text-[10px] uppercase ${ui.text}`}
+                                className={`inline-flex items-center gap-1.5 font-label text-[9px] uppercase sm:text-[10px] ${ui.text}`}
                               >
                                 <span
-                                  className={`h-1.5 w-1.5 rounded-full ${ui.dot}`}
+                                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${ui.dot}`}
                                 />
                                 {ui.label}
                               </span>
                             </td>
-                            <td className="px-3 py-2.5 text-xs text-on-surface-variant">
+                            <td className="min-w-[8rem] px-2 py-2 text-[11px] text-on-surface-variant sm:px-3 sm:py-2.5 sm:text-xs">
                               {row.evidenceI18nKey
                                 ? t(`sentryPage.${row.evidenceI18nKey}`)
                                 : row.evidence}
@@ -319,12 +328,12 @@ export function SentryScanModal({
               ) : null}
 
               {token ? (
-                <div className="flex flex-wrap gap-2 border-t border-outline-variant/10 pt-4">
+                <div className="flex flex-col gap-2 border-t border-outline-variant/10 pt-4 sm:flex-row sm:flex-wrap">
                   <a
                     href={TokenService.getJupiterSwapUrl(token.address)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded border border-secondary/25 bg-secondary/10 px-3 py-2 text-xs font-medium text-secondary transition-colors hover:bg-secondary/20"
+                    className="touch-manipulation inline-flex min-h-11 items-center justify-center gap-1.5 rounded border border-secondary/25 bg-secondary/10 px-3 py-2.5 text-xs font-medium text-secondary transition-colors hover:bg-secondary/20 sm:min-h-0 sm:justify-start sm:py-2"
                   >
                     <Repeat className="h-3.5 w-3.5" />
                     {t('tokenDetails.jupiter')}
@@ -334,7 +343,7 @@ export function SentryScanModal({
                     href={TokenService.getSolscanUrl(token.address)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded border border-primary-container/30 bg-primary-container/10 px-3 py-2 text-xs font-medium text-primary-container transition-colors hover:bg-primary-container/20"
+                    className="touch-manipulation inline-flex min-h-11 items-center justify-center gap-1.5 rounded border border-primary-container/30 bg-primary-container/10 px-3 py-2.5 text-xs font-medium text-primary-container transition-colors hover:bg-primary-container/20 sm:min-h-0 sm:justify-start sm:py-2"
                   >
                     <Search className="h-3.5 w-3.5" />
                     {t('tokenDetails.solscan')}
@@ -345,7 +354,7 @@ export function SentryScanModal({
                       href={token.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 rounded border border-primary/25 bg-primary/10 px-3 py-2 text-xs font-medium text-primary transition-colors hover:bg-primary/20"
+                      className="touch-manipulation inline-flex min-h-11 items-center justify-center gap-1.5 rounded border border-primary/25 bg-primary/10 px-3 py-2.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20 sm:min-h-0 sm:justify-start sm:py-2"
                     >
                       {t('tokenDetails.dexscreener')}
                       <ExternalLink className="h-3 w-3 opacity-70" />
