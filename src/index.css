@@ -11,6 +11,8 @@
   --color-on-primary: #00363e;
   --color-on-primary-container: #005763;
   --color-secondary: #4edea3;
+  --color-on-secondary: #003824;
+  --color-secondary-container: #00a572;
   --color-tertiary: #ffd6a7;
   --color-tertiary-container: #ffb147;
   --color-on-tertiary-container: #704500;
@@ -88,6 +90,25 @@
   background: rgba(46, 52, 71, 0.6);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+}
+
+.pulse-glow {
+  box-shadow: 0 0 15px rgba(138, 235, 255, 0.2);
+}
+
+.glass-panel {
+  background: rgba(46, 52, 71, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 .scanline {

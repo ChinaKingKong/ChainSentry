@@ -20,7 +20,11 @@ export function AppLayout() {
   const showSearch = location.pathname === '/';
 
   useEffect(() => {
-    if (location.pathname !== '/tokens') {
+    if (
+      location.pathname !== '/tokens' &&
+      location.pathname !== '/whales' &&
+      location.pathname !== '/sentry'
+    ) {
       document.title = t('meta.defaultTitle');
     }
   }, [location.pathname, t]);
@@ -30,7 +34,14 @@ export function AppLayout() {
   const slotDisplay = stats != null ? stats.slot.toLocaleString() : '…';
 
   const scrollFab = () => {
-    const id = location.pathname === '/' ? 'dashboard-top' : 'tokens-page-top';
+    const id =
+      location.pathname === '/'
+        ? 'dashboard-top'
+        : location.pathname === '/whales'
+          ? 'whales-page-top'
+          : location.pathname === '/sentry'
+            ? 'sentry-page-top'
+            : 'tokens-page-top';
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   };
 

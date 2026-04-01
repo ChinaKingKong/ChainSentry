@@ -7,6 +7,7 @@ import { HotTokensTable } from '../components/dashboard/HotTokensTable';
 import { SentimentHeatmap } from '../components/dashboard/SentimentHeatmap';
 import { QuickSwapPanel } from '../components/dashboard/QuickSwapPanel';
 import { TokenDetails } from '../components/TokenDetails';
+import { MaterialIcon } from '../components/ui/MaterialIcon';
 import { useTokens } from '../hooks/useTokens';
 import { formatUsdCompact } from '../lib/format';
 import { intlLocaleFor } from '../lib/intlLocale';
@@ -58,20 +59,28 @@ export function DashboardPage() {
         id="dashboard-top"
         className="mb-8 flex flex-wrap items-center gap-4 rounded border border-outline-variant/10 bg-surface-container-low/40 px-4 py-3"
       >
-        <label className="flex items-center gap-2 text-xs text-on-surface/70">
-          <span className="font-headline uppercase tracking-wider">
+        <label className="flex items-center gap-2.5 text-xs text-on-surface/70">
+          <span className="shrink-0 font-headline uppercase tracking-wider">
             {t('dashboard.rows')}
           </span>
-          <select
-            value={limit}
-            onChange={(e) => setLimit(Number(e.target.value))}
-            className="rounded border border-outline-variant/20 bg-surface-container-lowest px-2 py-1 text-on-surface"
-          >
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={30}>30</option>
-            <option value={50}>50</option>
-          </select>
+          <div className="relative inline-flex items-center">
+            <select
+              value={limit}
+              onChange={(e) => setLimit(Number(e.target.value))}
+              aria-label={t('dashboard.rows')}
+              className="scheme-dark min-w-[3.75rem] cursor-pointer appearance-none rounded-md border border-primary/20 bg-surface-container-low py-[calc(0.25rem+2.5px)] pl-2.5 pr-7 font-headline text-xs font-semibold tabular-nums leading-none text-on-surface shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-[border-color,box-shadow,background-color] hover:border-primary/35 hover:bg-surface-container-high focus:border-primary-container/55 focus:bg-surface-container-high focus:outline-none focus:ring-2 focus:ring-primary-container/20 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={30}>30</option>
+              <option value={50}>50</option>
+            </select>
+            <MaterialIcon
+              name="expand_more"
+              className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-base text-primary-container/80"
+              aria-hidden
+            />
+          </div>
         </label>
         <label className="flex items-center gap-2 text-xs text-on-surface/70">
           <input

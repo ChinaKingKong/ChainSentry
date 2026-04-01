@@ -52,12 +52,12 @@ export function TopNav({
           </div>
         )}
         {showSearch && (
-          <div className="hidden min-w-0 flex-1 items-center rounded-lg border border-outline-variant/15 bg-surface-container-low px-4 py-1.5 md:flex md:max-w-xs lg:max-w-sm">
+          <div className="hidden min-w-0 flex-1 items-center rounded-lg bg-surface-container-low px-4 py-1.5 md:flex md:max-w-xs lg:max-w-sm">
             <MaterialIcon name="search" className="mr-2 shrink-0 text-sm text-primary" />
             <input
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="min-w-0 flex-1 border-none bg-transparent text-sm text-on-surface placeholder:text-on-surface/30 focus:ring-0"
+              className="min-w-0 flex-1 appearance-none border-0 bg-transparent text-sm text-on-surface shadow-none outline-none ring-0 placeholder:text-on-surface/30 focus:border-0 focus:shadow-none focus:outline-none focus:ring-0 focus-visible:border-0 focus-visible:outline-none focus-visible:ring-0"
               placeholder={t('topNav.searchPlaceholder')}
               type="search"
               aria-label={t('topNav.searchAria')}
