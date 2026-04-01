@@ -124,6 +124,8 @@ public/
 
 构建产物为 `dist/`，可部署至 **Vercel、Netlify、Cloudflare Pages** 等静态托管；确保在平台环境变量中配置 `VITE_SOLANA_RPC_URL`（若需稳定主网访问）。
 
+- **Vercel**：仓库根目录的 `vercel.json` 将未命中静态文件的请求回写到 `index.html`，避免在 `/tokens`、`/sentry` 等路由**直接打开或刷新**时出现 404（React Router SPA 常见需求）。
+
 ---
 
 ## 许可证
