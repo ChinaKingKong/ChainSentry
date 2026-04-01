@@ -1,45 +1,50 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" role="img" aria-label="SENTINEL">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" role="img" aria-label="ChainSentry">
   <defs>
-    <linearGradient id="s-border" x1="10" y1="6" x2="54" y2="58" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#22d3ee"/>
+    <linearGradient id="cs-edge" x1="10" y1="8" x2="54" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#67e8f9"/>
+      <stop offset="0.5" stop-color="#22d3ee"/>
       <stop offset="1" stop-color="#4edea3"/>
     </linearGradient>
-    <linearGradient id="s-fill" x1="32" y1="12" x2="32" y2="52" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#8aebff" stop-opacity="0.22"/>
-      <stop offset="1" stop-color="#22d3ee" stop-opacity="0.06"/>
+    <linearGradient id="cs-face" x1="32" y1="14" x2="32" y2="52" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22d3ee" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#0e7490" stop-opacity="0.05"/>
     </linearGradient>
-    <radialGradient id="s-pupil" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(32 34) rotate(90) scale(8)">
-      <stop stop-color="#a2eeff"/>
-      <stop offset="0.45" stop-color="#22d3ee"/>
-      <stop offset="1" stop-color="#006877"/>
-    </radialGradient>
+    <linearGradient id="cs-core" x1="28" y1="30" x2="36" y2="38" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ecfeff"/>
+      <stop offset="1" stop-color="#22d3ee"/>
+    </linearGradient>
   </defs>
-  <!-- chip -->
-  <rect width="64" height="64" rx="15" fill="#070d1f"/>
-  <!-- shield -->
+  <rect width="64" height="64" rx="16" fill="#060b16"/>
+  <rect x="1" y="1" width="62" height="62" rx="15" stroke="url(#cs-edge)" stroke-opacity="0.4" stroke-width="1"/>
   <path
-    d="M32 9 49 17.5V35.2c0 11.2-8.6 18.6-17 20.8-8.4-2.2-17-9.6-17-20.8V17.5L32 9Z"
-    fill="#151b2d"
-    stroke="url(#s-border)"
+    d="M32 11 50 20v18.5c0 10.2-7.8 17.2-18 19.5-10.2-2.3-18-9.3-18-19.5V20l18-9Z"
+    fill="#0c1324"
+    stroke="url(#cs-edge)"
     stroke-width="2"
     stroke-linejoin="round"
   />
   <path
-    d="M32 9 49 17.5V35.2c0 11.2-8.6 18.6-17 20.8-8.4-2.2-17-9.6-17-20.8V17.5L32 9Z"
-    fill="url(#s-fill)"
+    d="M32 11 50 20v18.5c0 10.2-7.8 17.2-18 19.5-10.2-2.3-18-9.3-18-19.5V20l18-9Z"
+    fill="url(#cs-face)"
   />
-  <!-- scan arc -->
   <path
-    d="M20 38a14 14 0 0 1 24-8"
+    d="M21 33c0-3.3 2.5-6 5.6-6h1.2M37.2 27h1.2c3.1 0 5.6 2.7 5.6 6v0c0 3.3-2.5 6-5.6 6h-1.2M26.8 39h1.2c3.1 0 5.6-2.7 5.6-6v-2"
     stroke="#4edea3"
-    stroke-width="1.75"
+    stroke-width="2"
     stroke-linecap="round"
-    opacity="0.85"
+    stroke-linejoin="round"
+    opacity="0.92"
   />
-  <!-- eye / lens -->
-  <ellipse cx="32" cy="34" rx="12" ry="8.5" stroke="#22d3ee" stroke-width="1.5" opacity="0.45"/>
-  <circle cx="32" cy="34" r="6" fill="url(#s-pupil)"/>
-  <circle cx="34" cy="31" r="2" fill="#e8fdff" opacity="0.55"/>
-  <!-- radar beam -->
-  <path d="M32 34 46 20" stroke="#4edea3" stroke-width="2.25" stroke-linecap="round"/>
+  <path
+    d="M26.8 27h1.2c3.1 0 5.6 2.7 5.6 6v2c0 3.3 2.5 6 5.6 6h1.2"
+    stroke="url(#cs-edge)"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    opacity="0.88"
+  />
+  <circle cx="32" cy="33" r="7" fill="#111b2e" stroke="url(#cs-edge)" stroke-width="1.5"/>
+  <circle cx="32" cy="33" r="4" fill="url(#cs-core)"/>
+  <circle cx="33.5" cy="31.5" r="1.35" fill="#fff" opacity="0.62"/>
+  <path d="M17 46c5-4 10-6 15-6.5" stroke="#4edea3" stroke-width="1.5" stroke-linecap="round" opacity="0.45"/>
 </svg>

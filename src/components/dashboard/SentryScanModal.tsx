@@ -8,7 +8,6 @@ import { useClipboardCopy } from '../../hooks/useClipboardCopy';
 import { MaterialIcon } from '../ui/MaterialIcon';
 import { TokenService } from '../../services/api';
 import { formatUsdCompact } from '../../lib/format';
-import { SENTRY_DEMO_SCORE } from '../../lib/sentryDemo';
 
 const CIRC = 2 * Math.PI * 45;
 
@@ -80,7 +79,8 @@ export function SentryScanModal({
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
-  const gaugeScore = score ?? SENTRY_DEMO_SCORE;
+  const gaugeScore =
+    audit != null && score != null ? score : 0;
 
   const dashOffset = useMemo(() => {
     const active = (gaugeScore / 100) * CIRC;
@@ -88,7 +88,7 @@ export function SentryScanModal({
   }, [gaugeScore]);
 
   const meterSub = useMemo(() => {
-    if (score == null) return t('sentryPage.secureLabel');
+    if (audit == null || score == null) return t('hero.dash');
     if (score >= 72) return t('sentryPage.secureLabel');
     if (score >= 48) return t('sentryPage.meterModerate');
     return t('sentryPage.meterPoor');
@@ -227,7 +227,7 @@ export function SentryScanModal({
                     <span className="font-headline text-3xl font-bold text-secondary">
                       {audit != null && score != null
                         ? `${score}%`
-                        : t('sentryPage.meterPct')}
+                        : t('hero.dash')}
                     </span>
                     <span className="font-label text-[10px] uppercase tracking-widest text-secondary">
                       {meterSub}
@@ -238,7 +238,9 @@ export function SentryScanModal({
                   <p className="font-label text-[10px] uppercase tracking-widest text-outline">
                     {t('sentryPage.tokenPrefix')}{' '}
                     <span className="text-primary">
-                      {symbol || token?.symbol || t('sentryPage.tokenDemo')}
+                      {audit != null
+                        ? symbol || token?.symbol || t('hero.dash')
+                        : token?.symbol || t('hero.dash')}
                     </span>
                   </p>
                   {displayName ? (
@@ -248,7 +250,7 @@ export function SentryScanModal({
                   ) : null}
                   <div className="mt-2 flex items-start gap-2">
                     <p className="min-w-0 flex-1 break-all font-mono text-[10px] text-on-surface/45">
-                      {mintToCopy || t('sentryPage.mintDemo')}
+                      {mintToCopy || t('hero.dash')}
                     </p>
                     {mintToCopy ? (
                       <button

@@ -5,7 +5,6 @@ import { MaterialIcon } from '../components/ui/MaterialIcon';
 import { useSentryAudit, type SentryCheckRow } from '../hooks/useSentryAudit';
 import { useTokens } from '../hooks/useTokens';
 import { formatUsdCompact } from '../lib/format';
-import { SENTRY_DEMO_SCORE } from '../lib/sentryDemo';
 import { riskToSentryScore } from '../lib/sentryScore';
 
 const CIRC = 2 * Math.PI * 45;
@@ -62,7 +61,8 @@ export function SentryPage() {
     };
   }, [t, i18n]);
 
-  const gaugeScore = score ?? SENTRY_DEMO_SCORE;
+  const gaugeScore =
+    audit != null && score != null ? score : 0;
 
   const dashOffset = useMemo(() => {
     const active = (gaugeScore / 100) * CIRC;
@@ -70,7 +70,7 @@ export function SentryPage() {
   }, [gaugeScore]);
 
   const meterSub = useMemo(() => {
-    if (score == null) return t('sentryPage.secureLabel');
+    if (audit == null || score == null) return t('hero.dash');
     if (score >= 72) return t('sentryPage.secureLabel');
     if (score >= 48) return t('sentryPage.meterModerate');
     return t('sentryPage.meterPoor');
@@ -80,7 +80,7 @@ export function SentryPage() {
     if (!audit) {
       return {
         title: t('sentryPage.rugTitle'),
-        heading: t('sentryPage.rugHeading'),
+        heading: t('hero.dash'),
         body: t('sentryPage.preAnalyzeHint'),
       };
     }
@@ -110,7 +110,7 @@ export function SentryPage() {
   const ownBlock = useMemo(() => {
     if (!audit) {
       return {
-        heading: t('sentryPage.ownHeading'),
+        heading: t('hero.dash'),
         body: t('sentryPage.preAnalyzeHint'),
       };
     }
@@ -129,7 +129,7 @@ export function SentryPage() {
   const liqBlock = useMemo(() => {
     if (!audit) {
       return {
-        heading: t('sentryPage.liqHeading'),
+        heading: t('hero.dash'),
         body: t('sentryPage.preAnalyzeHint'),
       };
     }
@@ -238,7 +238,7 @@ export function SentryPage() {
               <span className="font-headline text-4xl font-bold text-secondary">
                 {audit != null && score != null
                   ? `${score}%`
-                  : t('sentryPage.meterPct')}
+                  : t('hero.dash')}
               </span>
               <span className="font-label text-[10px] uppercase tracking-widest text-secondary">
                 {meterSub}
@@ -250,13 +250,13 @@ export function SentryPage() {
             <p className="font-body text-sm text-on-surface-variant">
               {t('sentryPage.tokenPrefix')}{' '}
               <span className="font-label text-primary">
-                {symbol || t('sentryPage.tokenDemo')}
+                {audit != null ? symbol || t('hero.dash') : t('hero.dash')}
               </span>
             </p>
             <p className="mt-1 break-all px-4 font-label text-[10px] opacity-40">
-              {audit?.mint ?? t('sentryPage.mintDemo')}
+              {audit?.mint ?? t('hero.dash')}
             </p>
-            {displayName && symbol ? (
+            {audit != null && displayName && symbol ? (
               <p className="mt-1 text-[10px] text-on-surface-variant/70">
                 {displayName}
               </p>
@@ -323,7 +323,7 @@ export function SentryPage() {
                   {t('sentryPage.taxTitle')}
                 </span>
                 <h4 className="mt-1 font-headline text-2xl font-bold text-on-surface">
-                  {t('sentryPage.taxHeading')}
+                  {audit != null ? t('sentryPage.taxHeading') : t('hero.dash')}
                 </h4>
               </div>
               <MaterialIcon name="percent" className="text-secondary" />
