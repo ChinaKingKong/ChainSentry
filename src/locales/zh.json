@@ -47,7 +47,7 @@
   },
   "dashboard": {
     "rows": "显示行数",
-    "autoRefresh": "每 30 秒自动刷新",
+    "autoRefresh": "每 25 秒自动刷新（默认开启）",
     "refresh": "刷新",
     "syncing": "同步中…",
     "updated": "更新于 {{time}}",
@@ -190,6 +190,7 @@
     "title": "巨鲸追踪",
     "version": "v2.0",
     "methodology": "「巨鲸」= 各代币在 Solana 上最大单一 SPL 持仓账户的持有者（getTokenLargestAccounts RPC 快照）。候选池合并 Meme 与 DeFi 热门；主数字优先为 持仓量×现价 估算，否则为流动性/成交量启发值。侧栏色条仅表示列表内标的 24h 涨跌占比，不是单钱包资金流。",
+    "lastSynced": "行情最近同步：{{time}} · 约每 {{sec}} 秒自动拉取 DexScreener；链上快照约每 40 秒刷新",
     "filterMinAmount": "最小金额",
     "filterToken": "代币",
     "filterWallet": "钱包 / 代币",

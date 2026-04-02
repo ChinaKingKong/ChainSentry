@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { MaterialIcon } from '../components/ui/MaterialIcon';
 import { useTokens } from '../hooks/useTokens';
 import { formatUsdCompact, shortenAddress } from '../lib/format';
+import { intlLocaleFor } from '../lib/intlLocale';
 import { mergeTokensByMint } from '../lib/mergeTokensByMint';
 import { TokenService } from '../services/api';
 import { fetchLatestTxForWhaleAlert } from '../services/pairActivity';
@@ -28,6 +29,11 @@ const MIN_THRESH: Record<string, number> = {
   '100k': 100_000,
   '1m': 1_000_000,
 };
+
+/** DexScreener 列表轮询间隔 */
+const WHALES_MARKET_REFRESH_MS = 25_000;
+/** 链上巨鲸快照 / 池交易签名额外轮询（与行情解耦，避免长时间不触链上） */
+const WHALES_RPC_REFRESH_MS = 40_000;
 
 function alertShellClass(kind: AlertKind): string {
   const base =
@@ -94,8 +100,8 @@ export function WhalesPage() {
     {}
   );
   const [rpcHoldersReady, setRpcHoldersReady] = useState(false);
-  const memeFeed = useTokens(64, false, 0, 'meme');
-  const defiFeed = useTokens(64, false, 0, 'defi');
+  const memeFeed = useTokens(64, true, WHALES_MARKET_REFRESH_MS, 'meme');
+  const defiFeed = useTokens(64, true, WHALES_MARKET_REFRESH_MS, 'defi');
   const tokensLoading = memeFeed.loading || defiFeed.loading;
   const tokens = useMemo(
     () => mergeTokensByMint([memeFeed.tokens, defiFeed.tokens], 96),
@@ -129,28 +135,32 @@ export function WhalesPage() {
     });
   }, [baseWhaleAlerts, walletQ, whaleSnapshotByMint]);
 
-  useEffect(() => {
-    if (filteredAlerts.length === 0) {
-      setWhaleSnapshotByMint({});
-      setPoolTxSigByMint({});
-      setRpcHoldersReady(true);
-      return;
-    }
-    setRpcHoldersReady(false);
-    let cancelled = false;
-    const mints = filteredAlerts.map((t) => t.address);
-    void (async () => {
+  const filteredAlertsRef = useRef(filteredAlerts);
+  filteredAlertsRef.current = filteredAlerts;
+  const whaleRpcGenRef = useRef(0);
+
+  const executeWhaleRpc = useCallback(
+    async (list: Token[], opts?: { silent?: boolean }) => {
+      const gen = ++whaleRpcGenRef.current;
+      if (list.length === 0) {
+        setWhaleSnapshotByMint({});
+        setPoolTxSigByMint({});
+        setRpcHoldersReady(true);
+        return;
+      }
+      if (!opts?.silent) {
+        setRpcHoldersReady(false);
+      }
+      const mints = list.map((t) => t.address);
       const map = await fetchWhaleSnapshotsChunked(mints, 4);
-      if (cancelled) return;
+      if (gen !== whaleRpcGenRef.current) return;
       setWhaleSnapshotByMint(map);
 
-      const needPoolTx = filteredAlerts.filter(
-        (t) => !map[t.address]?.recentSignature
-      );
+      const needPoolTx = list.filter((t) => !map[t.address]?.recentSignature);
       const sigByMint: Record<string, string> = {};
       const CHUNK = 4;
       for (let i = 0; i < needPoolTx.length; i += CHUNK) {
-        if (cancelled) return;
+        if (gen !== whaleRpcGenRef.current) return;
         const slice = needPoolTx.slice(i, i + CHUNK);
         const part = await Promise.all(
           slice.map((tkn) => fetchLatestTxForWhaleAlert(tkn))
@@ -160,14 +170,29 @@ export function WhalesPage() {
           if (sig) sigByMint[tkn.address] = sig;
         });
       }
-      if (cancelled) return;
+      if (gen !== whaleRpcGenRef.current) return;
       setPoolTxSigByMint(sigByMint);
       setRpcHoldersReady(true);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [filteredAlerts]);
+    },
+    []
+  );
+
+  useEffect(() => {
+    void executeWhaleRpc(filteredAlerts);
+  }, [filteredAlerts, executeWhaleRpc]);
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      void executeWhaleRpc(filteredAlertsRef.current, { silent: true });
+    }, WHALES_RPC_REFRESH_MS);
+    return () => window.clearInterval(id);
+  }, [executeWhaleRpc]);
+
+  const lastMarketSyncMs = useMemo(() => {
+    const a = memeFeed.lastUpdate?.getTime() ?? 0;
+    const b = defiFeed.lastUpdate?.getTime() ?? 0;
+    return Math.max(a, b);
+  }, [memeFeed.lastUpdate, defiFeed.lastUpdate]);
 
   /** 侧栏统计：仍按列表内代币流动性 / 24h 涨跌聚合（非单钱包资金流） */
   const sortedByNotional = useMemo(() => {
@@ -288,6 +313,21 @@ export function WhalesPage() {
           <p className="mt-3 max-w-xl font-label text-xs leading-relaxed text-on-surface/55">
             {t('whalesPage.methodology')}
           </p>
+          {lastMarketSyncMs > 0 ? (
+            <p className="mt-2 font-mono text-[10px] text-on-surface/40">
+              {t('whalesPage.lastSynced', {
+                time: new Date(lastMarketSyncMs).toLocaleString(
+                  intlLocaleFor(i18n.language),
+                  {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                  }
+                ),
+                sec: Math.round(WHALES_MARKET_REFRESH_MS / 1000),
+              })}
+            </p>
+          ) : null}
         </div>
 
         <div className="flex flex-wrap items-center gap-4 rounded-lg border border-outline-variant/15 bg-surface-container-low p-2">

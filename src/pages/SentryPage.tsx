@@ -437,9 +437,9 @@ export function SentryPage() {
                     className={`font-label text-[10px] ${secure ? 'text-secondary' : critical ? 'text-error' : 'text-tertiary-container'}`}
                   >
                     {critical
-                      ? t('whalesPage.statusCritical')
+                      ? t('sentryPage.statusCritical')
                       : secure
-                        ? t('whalesPage.statusSecure')
+                        ? t('sentryPage.statusSecure')
                         : t('sentryPage.statusWarning')}
                   </span>
                 </div>

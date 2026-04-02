@@ -15,6 +15,8 @@ import { intlLocaleFor } from '../lib/intlLocale';
 import type { Token, TokenFeedCategory } from '../types/token';
 
 const DASH_FETCH_CAP = 200;
+/** 与巨鲸页等一致：DexScreener 行情轮询间隔 */
+const DASH_MARKET_REFRESH_MS = 25_000;
 
 export function DashboardPage() {
   const { t, i18n } = useTranslation();
@@ -23,7 +25,7 @@ export function DashboardPage() {
     useOutletContext<AppOutletContext>();
   const [pageStep, setPageStep] = useState(20);
   const [fetchLimit, setFetchLimit] = useState(20);
-  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(true);
   const [feedCategory, setFeedCategory] = useState<TokenFeedCategory>('meme');
   const [sentryModalOpen, setSentryModalOpen] = useState(false);
   const [sentryModalToken, setSentryModalToken] = useState<Token | null>(null);
@@ -45,7 +47,7 @@ export function DashboardPage() {
   const { tokens, loading, error, lastUpdate, refetch } = useTokens(
     fetchLimit,
     autoRefresh,
-    30000,
+    DASH_MARKET_REFRESH_MS,
     feedCategory
   );
 
