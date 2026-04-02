@@ -13,6 +13,13 @@ const SIZE_CLASS = {
 
 export type CommandSelectSize = keyof typeof SIZE_CLASS;
 
+/** 与 `<CommandSelect size="…" />` 内 `<select>` 同款外观，供带图标的自定义下拉触发器使用 */
+export function commandSelectTriggerClasses(
+  size: CommandSelectSize = 'sm'
+): string {
+  return `${COMMAND_SELECT_BASE} ${SIZE_CLASS[size]}`.trim();
+}
+
 export type CommandSelectProps = {
   /** 外层容器：控制宽度、flex 等 */
   className?: string;

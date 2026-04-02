@@ -57,7 +57,8 @@
     "sentryScanLoadingHint": "Mint authority, holder concentration, and liquidity",
     "pageStep": "Batch size",
     "loadMore": "Load more",
-    "loadedCount": "{{n}} loaded · cap {{limit}}",
+    "loadedCount": "{{n}} shown · {{fetched}} fetched · cap {{limit}}",
+    "listFilteredEmpty": "Fetched tokens don’t meet dashboard rules (pool ≥ $100k, logo from DexScreener, stablecoins like USDC/USDT excluded). Try Load more or switch category.",
     "noMoreToLoad": "No more unique tokens from this feed",
     "reachedFetchCap": "Max batch size reached ({{max}})"
   },
@@ -85,7 +86,8 @@
     "sentryScore": "Sentry Score",
     "action": "Action",
     "sentryScan": "Sentry Scan",
-    "clearSearchHint": "Clear the header search or switch category."
+    "clearSearchHint": "Clear the header search or switch category.",
+    "rowGoChart": "Click to open candlestick chart"
   },
   "sentiment": {
     "title": "Market Sentiment Heat",
@@ -124,6 +126,9 @@
     "noPairs": "No Solana pairs loaded. Return to Command and refresh feeds.",
     "verified": "VERIFIED",
     "pairAge": "Pair age: from DexScreener feed",
+    "openDexScreenerChart": "Open pair chart on DexScreener",
+    "okxChartLink": "OKX chart",
+    "openOkxChart": "Open token on OKX Web3",
     "liveFeed": "LIVE FEED",
     "focusPair": "Focus pair",
     "caLabel": "CA:",
@@ -172,8 +177,11 @@
     "freezeAuth": "Freeze Authority",
     "liqPair": "Liquidity (pair)",
     "unknown": "Unknown",
+    "auditFetching": "Reading on-chain…",
+    "authAuthorityClosed": "Disabled",
     "sentryScore": "Sentry score",
-    "auditHint": "Heuristic from DexScreener liquidity & volume — not on-chain mint scan.",
+    "auditHint": "Without on-chain mint data, the score uses DexScreener risk tier; liquidity from feeds.",
+    "auditHintOnChain": "Mint/freeze authorities and top-10 holder share from Solana RPC; liquidity/volume from DexScreener.",
     "pairLiq": "Pair liquidity",
     "vol24h": "Vol (24h)",
     "top10demo": "Top 10 concentration",
@@ -182,7 +190,8 @@
     "ohlcL": "L:",
     "ohlcC": "C:",
     "txBuy": "BUY",
-    "txSell": "SELL"
+    "txSell": "SELL",
+    "chartNoPrice": "No valid price — chart unavailable"
   },
   "whalesPage": {
     "docTitle": "SENTINEL | Whale Tracker",

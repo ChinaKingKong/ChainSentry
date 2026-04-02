@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { CommandSelect } from '../components/ui/CommandSelect';
+import { TokenFocusSelect } from '../components/ui/TokenFocusSelect';
+import { TokenLogo } from '../components/ui/TokenLogo';
 import { MaterialIcon } from '../components/ui/MaterialIcon';
 import { useClipboardCopy } from '../hooks/useClipboardCopy';
 import {
@@ -22,24 +24,63 @@ import { intlLocaleFor } from '../lib/intlLocale';
 import {
   riskToSentryScore,
   sentryScoreBarColor,
+  sentryScoreTextColor,
 } from '../lib/sentryScore';
+import {
+  computeSecurityScore,
+  fetchMintAuditOnChain,
+  type MintAuditOnChain,
+} from '../services/mintAudit';
+import {
+  buildSyntheticCandles,
+  type SyntheticCandle,
+} from '../lib/tokenPairChart';
+import { TokenService } from '../services/api';
+import { passesFocusDashboardTokenRules } from '../lib/tokenListFilters';
 import type { Token } from '../types/token';
 
-const CHART_BARS = [
-  { h: 'h-[40%]', line: 'h-20', tone: 'secondary' as const },
-  { h: 'h-[55%]', line: 'h-24', tone: 'secondary' as const },
-  { h: 'h-[45%]', line: 'h-28', tone: 'error' as const },
-  { h: 'h-[65%]', line: 'h-20', tone: 'secondary' as const },
-  { h: 'h-[80%]', line: 'h-32', tone: 'secondary' as const },
-  { h: 'h-[60%]', line: 'h-36', tone: 'error' as const },
-  { h: 'h-[75%]', line: 'h-24', tone: 'secondary' as const },
-];
+function TokenChartCandleColumn({
+  candle,
+  globalMin,
+  globalMax,
+}: {
+  candle: SyntheticCandle;
+  globalMin: number;
+  globalMax: number;
+}) {
+  const span = globalMax - globalMin || 1;
+  const lowPct = (candle.low - globalMin) / span;
+  const highPct = (candle.high - globalMin) / span;
+  const bodyLow = (Math.min(candle.open, candle.close) - globalMin) / span;
+  const bodyHigh = (Math.max(candle.open, candle.close) - globalMin) / span;
+  const wickH = Math.max((highPct - lowPct) * 100, 0.35);
+  const bodyH = Math.max((bodyHigh - bodyLow) * 100, 0.45);
 
-function barToneClass(tone: 'secondary' | 'error', part: 'bar' | 'wick') {
-  if (tone === 'error') {
-    return part === 'bar' ? 'bg-error/40' : 'bg-error';
-  }
-  return part === 'bar' ? 'bg-secondary/60' : 'bg-secondary';
+  return (
+    <div className="relative h-full min-w-0 flex-1 max-w-[12px]">
+      <div className="absolute inset-x-0 bottom-0 top-0 mx-auto w-full max-w-[8px]">
+        <div
+          className={`absolute left-1/2 w-px -translate-x-1/2 ${
+            candle.bull ? 'bg-secondary' : 'bg-error'
+          }`}
+          style={{
+            bottom: `${lowPct * 100}%`,
+            height: `${wickH}%`,
+          }}
+        />
+        <div
+          className={`absolute left-1/2 w-[65%] max-w-[6px] min-w-[2px] -translate-x-1/2 ${
+            candle.bull ? 'bg-secondary' : 'bg-error/90'
+          }`}
+          style={{
+            bottom: `${bodyLow * 100}%`,
+            height: `${bodyH}%`,
+            opacity: candle.bull ? 0.88 : 0.78,
+          }}
+        />
+      </div>
+    </div>
+  );
 }
 
 /** 兑换区大数字：按字符长度缩小字号，避免与右侧代币选择器重叠 */
@@ -63,7 +104,8 @@ export function TokensPage() {
   const [swapDir, setSwapDir] = useState<JupiterSwapDirection>('buy');
   const { publicKey } = useSolanaWallet();
   const [solBalanceSol, setSolBalanceSol] = useState<number | null>(null);
-  const { tokens, loading } = useTokens(50, false, 0);
+  /** 多取一些再在「关注交易对」侧按指挥台同款规则过滤，避免筛完后选项过少 */
+  const { tokens, loading } = useTokens(400, false, 0);
 
   useEffect(() => {
     document.title = t('tokensPage.docTitle');
@@ -80,6 +122,14 @@ export function TokensPage() {
     }
     return tokens[0];
   }, [mint, tokens]);
+
+  /** 与指挥台一致：≥10 万 U、有 Dex 图标、排除稳定币 */
+  const tokensForSelect = useMemo(() => {
+    if (tokens.length === 0) return [];
+    return tokens
+      .filter(passesFocusDashboardTokenRules)
+      .sort((a, b) => b.liquidity - a.liquidity);
+  }, [tokens]);
 
   const jupiterQuote = useJupiterSwapQuote(
     token?.address,
@@ -119,6 +169,69 @@ export function TokensPage() {
     token?.pair_address,
     14
   );
+
+  const [mintAudit, setMintAudit] = useState<MintAuditOnChain | null>(null);
+  const [mintAuditLoading, setMintAuditLoading] = useState(false);
+
+  useEffect(() => {
+    const addr = token?.address;
+    if (!addr) {
+      setMintAudit(null);
+      setMintAuditLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setMintAuditLoading(true);
+    void fetchMintAuditOnChain(addr).then((a) => {
+      if (!cancelled) {
+        setMintAudit(a);
+        setMintAuditLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [token?.address]);
+
+  const score = useMemo(() => {
+    if (!token) return 0;
+    if (mintAudit) return computeSecurityScore(mintAudit, token.liquidity);
+    return riskToSentryScore(token.risk_score);
+  }, [token, mintAudit]);
+
+  const holderBarPct = useMemo(() => {
+    if (!token) return 0;
+    if (mintAudit) return Math.min(100, mintAudit.top10HolderPct);
+    return Math.min(35, 8 + (100 - riskToSentryScore(token.risk_score)) * 0.25);
+  }, [token, mintAudit]);
+
+  const { chartCandles, chartBounds } = useMemo(() => {
+    const empty = {
+      chartCandles: [] as SyntheticCandle[],
+      chartBounds: { min: 0, max: 1 },
+    };
+    if (
+      !token?.address ||
+      !Number.isFinite(token.price) ||
+      token.price <= 0
+    ) {
+      return empty;
+    }
+    const candles = buildSyntheticCandles(tf, token.address, token.price);
+    if (candles.length === 0) return empty;
+    let min = Infinity;
+    let max = -Infinity;
+    for (const c of candles) {
+      min = Math.min(min, c.low);
+      max = Math.max(max, c.high);
+    }
+    if (!Number.isFinite(min) || !Number.isFinite(max)) return empty;
+    if (min === max) {
+      const eps = Math.abs(min) * 1e-6 || 1e-9;
+      return { chartCandles: candles, chartBounds: { min: min - eps, max: max + eps } };
+    }
+    return { chartCandles: candles, chartBounds: { min, max } };
+  }, [token, tf]);
 
   if (loading && !token) {
     return (
@@ -180,16 +293,19 @@ export function TokensPage() {
 
   const receiveAmountClass = swapAmountFontClass(receiveAmountDisplay);
 
-  const sym = token.symbol.slice(0, 6);
-  const score = riskToSentryScore(token.risk_score);
-  const holderBarPct = Math.min(35, 8 + (100 - score) * 0.25);
+  const lastChartCandle =
+    chartCandles.length > 0 ? chartCandles[chartCandles.length - 1] : null;
+  const fmtOhlc = (v: number) =>
+    v.toLocaleString(locale, {
+      minimumFractionDigits: 3,
+      maximumFractionDigits: 3,
+    });
   const closeStr =
-    token.price > 0
-      ? token.price.toLocaleString(locale, {
-          minimumFractionDigits: 3,
-          maximumFractionDigits: 3,
-        })
-      : t('hero.dash');
+    lastChartCandle != null
+      ? fmtOhlc(lastChartCandle.close)
+      : token.price > 0
+        ? fmtOhlc(token.price)
+        : t('hero.dash');
 
   return (
     <div id="tokens-page-top" className="relative overflow-hidden">
@@ -198,13 +314,15 @@ export function TokensPage() {
         aria-hidden
       />
 
-      <header className="relative z-10 mb-8 flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
+      <header className="relative z-30 mb-8 flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center border border-primary/20 bg-surface-container-highest p-2">
-            <span className="font-headline text-2xl font-black text-primary">
-              {sym.slice(0, 2).toUpperCase()}
-            </span>
-          </div>
+          <TokenLogo
+            logoUri={token.logo_uri}
+            symbol={token.symbol}
+            className="h-16 w-16 shrink-0"
+            fallbackFrameClassName="border-2 border-primary/20 bg-surface-container-highest"
+            fallbackClassName="text-2xl font-black text-primary"
+          />
           <div>
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="font-headline text-3xl font-bold tracking-tight text-on-surface sm:text-4xl">
@@ -226,10 +344,35 @@ export function TokensPage() {
                 <MaterialIcon name="content_copy" className="text-sm" />
                 {t('tokensPage.caLabel')} {shortenAddress(token.address, 4)}
               </button>
-              <span className="text-on-surface-variant flex items-center gap-1">
-                <MaterialIcon name="schedule" className="text-sm" />
+              <a
+                href={TokenService.getDexScreenerChartUrl(token)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-on-surface-variant flex items-center gap-1 no-underline transition-colors hover:text-primary"
+                aria-label={t('tokensPage.openDexScreenerChart')}
+              >
+                <MaterialIcon name="schedule" className="text-sm" aria-hidden />
                 {t('tokensPage.pairAge')}
+              </a>
+              <span
+                className="text-on-surface-variant/35 select-none"
+                aria-hidden
+              >
+                ·
               </span>
+              <a
+                href={TokenService.getOkxSolanaTokenUrl(
+                  token.address,
+                  i18n.language
+                )}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-on-surface-variant flex items-center gap-1 no-underline transition-colors hover:text-primary"
+                aria-label={t('tokensPage.openOkxChart')}
+              >
+                <MaterialIcon name="candlestick_chart" className="text-sm" />
+                {t('tokensPage.okxChartLink')}
+              </a>
               <span className="flex items-center gap-1 text-secondary">
                 <span className="h-2 w-2 rounded-full bg-secondary" />
                 {t('tokensPage.liveFeed')}
@@ -239,21 +382,16 @@ export function TokensPage() {
               <span className="shrink-0 font-headline uppercase tracking-wider">
                 {t('tokensPage.focusPair')}
               </span>
-              <CommandSelect
+              <TokenFocusSelect
                 className="w-max max-w-[11rem] shrink-0 sm:max-w-[12rem]"
                 aria-label={t('tokensPage.focusPair')}
                 value={token.address}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setParams(v ? { mint: v } : {});
+                tokens={tokensForSelect}
+                fallbackToken={token}
+                onChange={(mintAddress) => {
+                  setParams(mintAddress ? { mint: mintAddress } : {});
                 }}
-              >
-                {tokens.map((x) => (
-                  <option key={x.address} value={x.address}>
-                    {x.symbol} · {shortenAddress(x.address, 3)}
-                  </option>
-                ))}
-              </CommandSelect>
+              />
             </label>
           </div>
         </div>
@@ -314,24 +452,21 @@ export function TokensPage() {
               <div className="flex flex-wrap items-center gap-3 font-label text-xs sm:gap-4">
                 <span className="text-secondary">
                   {t('tokensPage.ohlcO')}{' '}
-                  {(token.price * 0.98).toLocaleString(locale, {
-                    minimumFractionDigits: 3,
-                    maximumFractionDigits: 3,
-                  })}
+                  {lastChartCandle
+                    ? fmtOhlc(lastChartCandle.open)
+                    : fmtOhlc(token.price * 0.98)}
                 </span>
                 <span className="text-error">
                   {t('tokensPage.ohlcH')}{' '}
-                  {(token.price * 1.02).toLocaleString(locale, {
-                    minimumFractionDigits: 3,
-                    maximumFractionDigits: 3,
-                  })}
+                  {lastChartCandle
+                    ? fmtOhlc(lastChartCandle.high)
+                    : fmtOhlc(token.price * 1.02)}
                 </span>
                 <span className="text-secondary">
                   {t('tokensPage.ohlcL')}{' '}
-                  {(token.price * 0.97).toLocaleString(locale, {
-                    minimumFractionDigits: 3,
-                    maximumFractionDigits: 3,
-                  })}
+                  {lastChartCandle
+                    ? fmtOhlc(lastChartCandle.low)
+                    : fmtOhlc(token.price * 0.97)}
                 </span>
                 <span className="text-on-surface">
                   {t('tokensPage.ohlcC')} {closeStr}
@@ -339,26 +474,32 @@ export function TokensPage() {
               </div>
             </div>
             <div className="relative h-[320px] w-full bg-surface-container-lowest p-4 sm:h-[400px]">
-              <div className="absolute inset-0 flex items-end justify-around gap-1 px-6 pb-10 opacity-80 sm:px-8 sm:pb-12">
-                {CHART_BARS.map((b, i) => (
-                  <div
-                    key={i}
-                    className={`relative w-full max-w-[8px] ${b.h} ${barToneClass(b.tone, 'bar')}`}
-                  >
-                    <div
-                      className={`absolute -top-4 left-1/2 w-px -translate-x-1/2 ${b.line} ${barToneClass(b.tone, 'wick')}`}
-                    />
+              {chartCandles.length === 0 ? (
+                <div className="flex h-full items-center justify-center font-label text-xs text-on-surface-variant">
+                  {t('tokensPage.chartNoPrice')}
+                </div>
+              ) : (
+                <>
+                  <div className="absolute inset-4 bottom-14 flex flex-row items-stretch justify-between gap-px opacity-90 sm:inset-6 sm:bottom-16">
+                    {chartCandles.map((c, i) => (
+                      <TokenChartCandleColumn
+                        key={`${tf}-${token.address}-${i}`}
+                        candle={c}
+                        globalMin={chartBounds.min}
+                        globalMax={chartBounds.max}
+                      />
+                    ))}
                   </div>
-                ))}
-              </div>
-              <div className="pointer-events-none absolute inset-0 grid grid-cols-6 grid-rows-6">
-                {Array.from({ length: 36 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className={`border-outline-variant/5 ${i % 6 < 5 ? 'border-r' : ''} ${i < 30 ? 'border-b' : ''}`}
-                  />
-                ))}
-              </div>
+                  <div className="pointer-events-none absolute inset-0 grid grid-cols-6 grid-rows-6">
+                    {Array.from({ length: 36 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className={`border-outline-variant/5 ${i % 6 < 5 ? 'border-r' : ''} ${i < 30 ? 'border-b' : ''}`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </section>
 
@@ -637,16 +778,54 @@ export function TokensPage() {
                   <div className="font-label text-xs uppercase tracking-wider text-on-surface-variant">
                     {t('tokensPage.mintAuth')}
                   </div>
-                  <div className="text-xs font-bold uppercase text-secondary">
-                    {t('tokensPage.unknown')}
+                  <div className="text-xs font-bold uppercase">
+                    {mintAuditLoading ? (
+                      <span className="animate-pulse text-on-surface-variant">
+                        {t('tokensPage.auditFetching')}
+                      </span>
+                    ) : !mintAudit ? (
+                      <span className="text-on-surface-variant">
+                        {t('tokensPage.unknown')}
+                      </span>
+                    ) : mintAudit.mintAuthorityDisabled ? (
+                      <span className="text-secondary">
+                        {t('tokensPage.authAuthorityClosed')}
+                      </span>
+                    ) : (
+                      <span
+                        className="font-mono text-[10px] text-error/90"
+                        title={mintAudit.mintAuthorityAddress ?? undefined}
+                      >
+                        {shortenAddress(mintAudit.mintAuthorityAddress!, 4)}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center justify-between border-l-2 border-secondary bg-surface-container-lowest p-3">
                   <div className="font-label text-xs uppercase tracking-wider text-on-surface-variant">
                     {t('tokensPage.freezeAuth')}
                   </div>
-                  <div className="text-xs font-bold uppercase text-secondary">
-                    {t('tokensPage.unknown')}
+                  <div className="text-xs font-bold uppercase">
+                    {mintAuditLoading ? (
+                      <span className="animate-pulse text-on-surface-variant">
+                        {t('tokensPage.auditFetching')}
+                      </span>
+                    ) : !mintAudit ? (
+                      <span className="text-on-surface-variant">
+                        {t('tokensPage.unknown')}
+                      </span>
+                    ) : mintAudit.freezeAuthorityRemoved ? (
+                      <span className="text-secondary">
+                        {t('tokensPage.authAuthorityClosed')}
+                      </span>
+                    ) : (
+                      <span
+                        className="font-mono text-[10px] text-error/90"
+                        title={mintAudit.freezeAuthorityAddress ?? undefined}
+                      >
+                        {shortenAddress(mintAudit.freezeAuthorityAddress!, 4)}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center justify-between border-l-2 border-tertiary-container bg-surface-container-lowest p-3">
@@ -663,7 +842,9 @@ export function TokensPage() {
                   <div className="font-label text-[10px] uppercase tracking-widest text-on-surface-variant">
                     {t('tokensPage.sentryScore')}
                   </div>
-                  <div className="font-headline text-xl font-bold text-on-surface">
+                  <div
+                    className={`font-headline text-xl font-bold ${sentryScoreTextColor(score)}`}
+                  >
                     {score}
                   </div>
                 </div>
@@ -674,7 +855,9 @@ export function TokensPage() {
                   />
                 </div>
                 <p className="text-[10px] italic text-on-surface-variant">
-                  {t('tokensPage.auditHint')}
+                  {mintAudit
+                    ? t('tokensPage.auditHintOnChain')
+                    : t('tokensPage.auditHint')}
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-y-4 border-t border-outline-variant/10 pt-4">

@@ -9,15 +9,21 @@ export type MintAuditOnChain = {
   mintAuthorityDisabled: boolean;
   /** true = 无冻结权限（安全） */
   freezeAuthorityRemoved: boolean;
+  /** 仍存在铸币权限时的地址；已关闭为 null */
+  mintAuthorityAddress: string | null;
+  /** 仍存在冻结权限时的地址；无冻结为 null */
+  freezeAuthorityAddress: string | null;
   /** 前 10 大持仓占总供应量比例 0–100 */
   top10HolderPct: number;
   /** Unix 秒 */
   fetchedAt: number;
 };
 
+const SPL_MINT_PROGRAMS = new Set(['spl-token', 'spl-token-2022']);
+
 /**
- * 读取 SPL Token Mint 账户及前十大持仓占比（标准 Token Program）。
- * Token-2022 / 非 Mint 会返回 null。
+ * 读取 SPL / Token-2022 Mint 账户及前十大持仓占比。
+ * 非 Mint 或无法解析时返回 null。
  */
 export async function fetchMintAuditOnChain(
   mintAddress: string
@@ -34,7 +40,7 @@ export async function fetchMintAuditOnChain(
   if (!value?.data || typeof value.data === 'string') return null;
 
   const data = value.data as ParsedAccountData;
-  if (data.program !== 'spl-token') return null;
+  if (!SPL_MINT_PROGRAMS.has(data.program)) return null;
   const parsed = data.parsed as {
     type?: string;
     info?: {
@@ -49,8 +55,16 @@ export async function fetchMintAuditOnChain(
   const info = parsed.info;
   const decimals = info.decimals ?? 0;
   const supplyRaw = BigInt(info.supply ?? '0');
-  const mintAuthorityDisabled = info.mintAuthority == null;
-  const freezeAuthorityRemoved = info.freezeAuthority == null;
+  const mintAuthorityAddress =
+    info.mintAuthority == null || info.mintAuthority === ''
+      ? null
+      : String(info.mintAuthority);
+  const freezeAuthorityAddress =
+    info.freezeAuthority == null || info.freezeAuthority === ''
+      ? null
+      : String(info.freezeAuthority);
+  const mintAuthorityDisabled = mintAuthorityAddress == null;
+  const freezeAuthorityRemoved = freezeAuthorityAddress == null;
 
   let top10HolderPct = 0;
   if (supplyRaw > 0n) {
@@ -72,6 +86,8 @@ export async function fetchMintAuditOnChain(
     supplyRaw,
     mintAuthorityDisabled,
     freezeAuthorityRemoved,
+    mintAuthorityAddress,
+    freezeAuthorityAddress,
     top10HolderPct,
     fetchedAt: Math.floor(Date.now() / 1000),
   };

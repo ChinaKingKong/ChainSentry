@@ -12,9 +12,10 @@ import { useSentryAudit } from '../hooks/useSentryAudit';
 import { useTokens } from '../hooks/useTokens';
 import { formatUsdCompact } from '../lib/format';
 import { intlLocaleFor } from '../lib/intlLocale';
+import { passesFocusDashboardTokenRules } from '../lib/tokenListFilters';
 import type { Token, TokenFeedCategory } from '../types/token';
 
-const DASH_FETCH_CAP = 200;
+const DASH_FETCH_CAP = 500;
 /** 与巨鲸页等一致：DexScreener 行情轮询间隔 */
 const DASH_MARKET_REFRESH_MS = 25_000;
 
@@ -51,6 +52,11 @@ export function DashboardPage() {
     feedCategory
   );
 
+  const dashboardTokens = useMemo(
+    () => tokens.filter(passesFocusDashboardTokenRules),
+    [tokens]
+  );
+
   const handleFeedCategoryChange = useCallback(
     (c: TokenFeedCategory) => {
       if (c === feedCategory) return;
@@ -77,18 +83,24 @@ export function DashboardPage() {
   }, [clearSentryAudit]);
 
   const totalLiquidity = useMemo(
-    () => tokens.reduce((s, t) => s + t.liquidity, 0),
-    [tokens]
+    () => dashboardTokens.reduce((s, t) => s + t.liquidity, 0),
+    [dashboardTokens]
   );
 
   const avgChange = useMemo(() => {
-    if (tokens.length === 0) return null;
-    return tokens.reduce((s, t) => s + t.change_24h, 0) / tokens.length;
-  }, [tokens]);
+    if (dashboardTokens.length === 0) return null;
+    return (
+      dashboardTokens.reduce((s, t) => s + t.change_24h, 0) /
+      dashboardTokens.length
+    );
+  }, [dashboardTokens]);
 
   const highRiskCount = useMemo(
-    () => tokens.filter((t) => t.risk_score === 'C' || t.risk_score === 'D').length,
-    [tokens]
+    () =>
+      dashboardTokens.filter(
+        (t) => t.risk_score === 'C' || t.risk_score === 'D'
+      ).length,
+    [dashboardTokens]
   );
 
   const canLoadMore =
@@ -131,6 +143,7 @@ export function DashboardPage() {
             <option value={20}>20</option>
             <option value={30}>30</option>
             <option value={50}>50</option>
+            <option value={100}>100</option>
           </CommandSelect>
         </label>
         <label className="flex items-center gap-2 text-xs text-on-surface/70">
@@ -171,8 +184,13 @@ export function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-8 xl:grid-cols-3">
         <div className="xl:col-span-2">
+          {!loading && tokens.length > 0 && dashboardTokens.length === 0 ? (
+            <div className="mb-4 rounded border border-outline-variant/15 bg-surface-container-low/80 px-4 py-3 text-[11px] text-on-surface-variant">
+              {t('dashboard.listFilteredEmpty')}
+            </div>
+          ) : null}
           <HotTokensTable
-            tokens={tokens}
+            tokens={dashboardTokens}
             loading={loading}
             searchQuery={searchQuery}
             category={feedCategory}
@@ -191,7 +209,8 @@ export function DashboardPage() {
             </button>
             <span className="text-[11px] text-on-surface/50">
               {t('dashboard.loadedCount', {
-                n: tokens.length,
+                n: dashboardTokens.length,
+                fetched: tokens.length,
                 limit: fetchLimit,
               })}
             </span>
@@ -206,7 +225,7 @@ export function DashboardPage() {
         </div>
 
         <div className="space-y-8">
-          <SentimentHeatmap tokens={tokens} loading={loading} />
+          <SentimentHeatmap tokens={dashboardTokens} loading={loading} />
           <QuickSwapPanel />
         </div>
       </div>

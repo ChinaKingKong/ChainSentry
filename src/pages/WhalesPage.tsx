@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { MaterialIcon } from '../components/ui/MaterialIcon';
+import { TokenLogo } from '../components/ui/TokenLogo';
 import { useTokens } from '../hooks/useTokens';
 import { formatUsdCompact, shortenAddress } from '../lib/format';
 import { intlLocaleFor } from '../lib/intlLocale';
@@ -100,8 +101,8 @@ export function WhalesPage() {
     {}
   );
   const [rpcHoldersReady, setRpcHoldersReady] = useState(false);
-  const memeFeed = useTokens(64, true, WHALES_MARKET_REFRESH_MS, 'meme');
-  const defiFeed = useTokens(64, true, WHALES_MARKET_REFRESH_MS, 'defi');
+  const memeFeed = useTokens(200, true, WHALES_MARKET_REFRESH_MS, 'meme');
+  const defiFeed = useTokens(200, true, WHALES_MARKET_REFRESH_MS, 'defi');
   const tokensLoading = memeFeed.loading || defiFeed.loading;
   const tokens = useMemo(
     () => mergeTokensByMint([memeFeed.tokens, defiFeed.tokens], 96),
@@ -612,11 +613,13 @@ export function WhalesPage() {
                     className="flex w-full items-center gap-4 rounded-sm text-left transition-colors hover:bg-surface-container-high/60"
                   >
                     <div className="relative shrink-0">
-                      <div className="flex h-16 w-16 items-center justify-center rounded border-2 border-primary/20 bg-surface-container-low">
-                        <span className="font-headline text-lg font-bold text-primary">
-                          {leadToken.symbol.slice(0, 2).toUpperCase()}
-                        </span>
-                      </div>
+                      <TokenLogo
+                        logoUri={leadToken.logo_uri}
+                        symbol={leadToken.symbol}
+                        className="h-16 w-16 shrink-0"
+                        fallbackFrameClassName="border-2 border-primary/20 bg-surface-container-low"
+                        fallbackClassName="text-lg font-bold text-primary"
+                      />
                       {leadToken.risk_score === 'A' ||
                       leadToken.risk_score === 'B' ? (
                         <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border-2 border-surface bg-secondary-container">
@@ -674,9 +677,13 @@ export function WhalesPage() {
                           className="flex items-center justify-between"
                         >
                           <div className="flex min-w-0 items-center gap-2">
-                            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-surface-container text-[10px] font-bold text-on-surface">
-                              {tok.symbol.slice(0, 1).toUpperCase()}
-                            </div>
+                            <TokenLogo
+                              logoUri={tok.logo_uri}
+                              symbol={tok.symbol}
+                              className="h-6 w-6 shrink-0"
+                              fallbackFrameClassName="bg-surface-container"
+                              fallbackClassName="text-[10px] font-bold text-on-surface"
+                            />
                             <span className="truncate font-label text-xs text-on-surface">
                               {tok.symbol}
                             </span>

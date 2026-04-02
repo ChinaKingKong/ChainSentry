@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import type { Token, TokenFeedCategory } from '../../types/token';
 import { formatTokenPrice, formatUsdCompact, shortenAddress } from '../../lib/format';
 import {
@@ -8,6 +9,7 @@ import {
   sentryScoreTextColor,
 } from '../../lib/sentryScore';
 import { MaterialIcon } from '../ui/MaterialIcon';
+import { TokenLogo } from '../ui/TokenLogo';
 
 export type HotTokensTableProps = {
   tokens: Token[];
@@ -39,6 +41,14 @@ export function HotTokensTable({
   maxRows,
 }: HotTokensTableProps) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+
+  const goTokenChart = (mint: string) => {
+    navigate({
+      pathname: '/tokens',
+      search: `?mint=${encodeURIComponent(mint)}`,
+    });
+  };
 
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -115,15 +125,19 @@ export function HotTokensTable({
                 return (
                   <tr
                     key={token.address}
-                    className="group transition-colors hover:bg-surface-container-low/80"
+                    className="group cursor-pointer transition-colors hover:bg-surface-container-low/80"
+                    title={t('hotTable.rowGoChart')}
+                    onClick={() => goTokenChart(token.address)}
                   >
                     <td className="py-5">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded bg-surface-container-highest">
-                          <span className="font-headline text-sm font-bold text-primary">
-                            {token.symbol.slice(0, 2).toUpperCase()}
-                          </span>
-                        </div>
+                        <TokenLogo
+                          logoUri={token.logo_uri}
+                          symbol={token.symbol}
+                          className="h-10 w-10 shrink-0"
+                          fallbackFrameClassName="border border-primary/20 bg-surface-container-highest"
+                          fallbackClassName="text-sm font-bold text-primary"
+                        />
                         <div>
                           <p className="font-headline text-sm font-bold tracking-tight text-on-surface">
                             {token.symbol}
@@ -165,7 +179,10 @@ export function HotTokensTable({
                       <button
                         type="button"
                         disabled={sentryScanBusy}
-                        onClick={() => void onSentryScan(token)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void onSentryScan(token);
+                        }}
                         className="rounded border border-primary/20 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-primary transition-all hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-45"
                       >
                         {t('hotTable.sentryScan')}

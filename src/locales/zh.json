@@ -57,7 +57,8 @@
     "sentryScanLoadingHint": "正在读取铸币权限、持仓集中度与流动性",
     "pageStep": "每批条数",
     "loadMore": "加载更多",
-    "loadedCount": "已加载 {{n}} 条 · 请求上限 {{limit}}",
+    "loadedCount": "展示 {{n}} 条 · 已拉取 {{fetched}} 条 · 上限 {{limit}}",
+    "listFilteredEmpty": "当前拉取到的代币均不满足指挥台展示条件（池流动性 ≥ 10 万 USDC、需提供图标，且不含常见稳定币如 USDC/USDT 等）。可尝试「加载更多」或切换分类。",
     "noMoreToLoad": "当前数据源已无更多唯一代币",
     "reachedFetchCap": "已达单次加载上限（{{max}} 条）"
   },
@@ -85,7 +86,8 @@
     "sentryScore": "哨兵分",
     "action": "操作",
     "sentryScan": "哨兵扫描",
-    "clearSearchHint": "可清空顶部搜索框，或切换到其他分类。"
+    "clearSearchHint": "可清空顶部搜索框，或切换到其他分类。",
+    "rowGoChart": "点击查看 K 线图"
   },
   "sentiment": {
     "title": "市场情绪热力",
@@ -124,6 +126,9 @@
     "noPairs": "暂无 Solana 交易对数据，请返回指挥台并刷新数据源。",
     "verified": "已验证",
     "pairAge": "池龄：来自 DexScreener 数据源",
+    "openDexScreenerChart": "在 DexScreener 打开该交易对 K 线",
+    "okxChartLink": "OKX K 线",
+    "openOkxChart": "在 OKX Web3 打开该代币行情",
     "liveFeed": "实时行情",
     "focusPair": "关注交易对",
     "caLabel": "合约：",
@@ -172,8 +177,11 @@
     "freezeAuth": "冻结权限",
     "liqPair": "流动性（交易对）",
     "unknown": "未知",
+    "auditFetching": "链上读取中…",
+    "authAuthorityClosed": "已关闭",
     "sentryScore": "哨兵分",
-    "auditHint": "基于 DexScreener 流动性与成交量的启发式评估 — 非链上铸币扫描。",
+    "auditHint": "未取得链上 Mint 解析时，哨兵分依据 DexScreener 风险档估算；流动性来自行情源。",
+    "auditHintOnChain": "铸币/冻结权限与前十持仓占比来自 Solana RPC（解析 Mint + getTokenLargestAccounts）；流动性与成交量仍为 DexScreener。",
     "pairLiq": "交易对流动性",
     "vol24h": "24h 成交量",
     "top10demo": "前十占比",
@@ -182,7 +190,8 @@
     "ohlcL": "低：",
     "ohlcC": "收：",
     "txBuy": "买入",
-    "txSell": "卖出"
+    "txSell": "卖出",
+    "chartNoPrice": "暂无有效价格，无法绘制 K 线"
   },
   "whalesPage": {
     "docTitle": "SENTINEL | 巨鲸追踪",
