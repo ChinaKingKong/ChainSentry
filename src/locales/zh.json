@@ -67,7 +67,7 @@
     "live": "实时",
     "stale": "滞后",
     "liquidityTracked": "追踪流动性",
-    "vs24hSample": "{{sign}}{{pct}}% 对比 24h（样本）",
+    "vs24hSample": "{{sign}}{{pct}}% 对比 24h",
     "dash": "—",
     "highRisk": "高风险预警",
     "highRiskHint": "当前列表中按流动性与成交量启发式评为 C/D 的代币数量"

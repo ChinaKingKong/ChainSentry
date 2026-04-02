@@ -67,7 +67,7 @@
     "live": "Live",
     "stale": "Stale",
     "liquidityTracked": "Liquidity tracked",
-    "vs24hSample": "{{sign}}{{pct}}% vs 24h (sample)",
+    "vs24hSample": "{{sign}}{{pct}}% vs 24h",
     "dash": "—",
     "highRisk": "High risk alerts",
     "highRiskHint": "Tokens in view graded C/D by liquidity & volume heuristics"
