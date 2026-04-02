@@ -4,8 +4,22 @@ import { useNavigate } from 'react-router-dom';
 import { MaterialIcon } from '../components/ui/MaterialIcon';
 import { useTokens } from '../hooks/useTokens';
 import { formatUsdCompact, shortenAddress } from '../lib/format';
+import { mergeTokensByMint } from '../lib/mergeTokensByMint';
+import { TokenService } from '../services/api';
+import {
+  fetchWhaleSnapshotsChunked,
+  type WhaleHolderSnapshot,
+} from '../services/whaleHolders';
+import type { Token } from '../types/token';
 
 type AlertKind = 'inflow' | 'outflow' | 'critical';
+
+/** RPC 未返回签名时的回退：池子或 mint 账户页 */
+function whaleAlertSolscanFallbackUrl(tkn: Token): string {
+  const pair = tkn.pair_address?.trim();
+  if (pair) return TokenService.getSolscanAccountUrl(pair);
+  return TokenService.getSolscanAccountUrl(tkn.address);
+}
 
 const MIN_THRESH: Record<string, number> = {
   '10k': 10_000,
@@ -56,15 +70,34 @@ function pickBadgeKey(
   return 'badgeActive';
 }
 
+function formatWhaleUiAmount(n: number): string {
+  if (!Number.isFinite(n)) return '—';
+  if (n >= 1e9) return `${(n / 1e9).toFixed(2)}B`;
+  if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M`;
+  if (n >= 1e3) return `${(n / 1e3).toFixed(2)}K`;
+  if (n >= 1) return n >= 100 ? String(Math.round(n)) : n.toFixed(2);
+  return n.toPrecision(4);
+}
+
 export function WhalesPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [minAmt, setMinAmt] = useState('10k');
   const [tokenFilter, setTokenFilter] = useState('all');
   const [walletQ, setWalletQ] = useState('');
-  const { tokens, loading: tokensLoading } = useTokens(96, false, 0);
+  const [whaleSnapshotByMint, setWhaleSnapshotByMint] = useState<
+    Record<string, WhaleHolderSnapshot>
+  >({});
+  const [rpcHoldersReady, setRpcHoldersReady] = useState(false);
+  const memeFeed = useTokens(64, false, 0, 'meme');
+  const defiFeed = useTokens(64, false, 0, 'defi');
+  const tokensLoading = memeFeed.loading || defiFeed.loading;
+  const tokens = useMemo(
+    () => mergeTokensByMint([memeFeed.tokens, defiFeed.tokens], 96),
+    [memeFeed.tokens, defiFeed.tokens]
+  );
 
-  const filteredAlerts = useMemo(() => {
+  const baseWhaleAlerts = useMemo(() => {
     const thr = MIN_THRESH[minAmt] ?? 10_000;
     let list = tokens.filter(
       (x) => Math.max(x.volume_24h, x.liquidity * 0.2) >= thr
@@ -74,19 +107,44 @@ export function WhalesPage() {
         (x) => x.symbol.toUpperCase() === tokenFilter.toUpperCase()
       );
     }
-    const q = walletQ.trim().toLowerCase();
-    if (q) {
-      list = list.filter(
-        (x) =>
-          x.address.toLowerCase().includes(q) ||
-          x.symbol.toLowerCase().includes(q) ||
-          x.name.toLowerCase().includes(q)
-      );
-    }
     return list.slice(0, 24);
-  }, [tokens, minAmt, tokenFilter, walletQ]);
+  }, [tokens, minAmt, tokenFilter]);
 
-  /** 活跃档案 / 资金流向：按当前列表动态聚合（非链上真实钱包持仓） */
+  const filteredAlerts = useMemo(() => {
+    const q = walletQ.trim().toLowerCase();
+    if (!q) return baseWhaleAlerts;
+    return baseWhaleAlerts.filter((x) => {
+      const w = whaleSnapshotByMint[x.address]?.ownerWallet;
+      return (
+        x.address.toLowerCase().includes(q) ||
+        x.symbol.toLowerCase().includes(q) ||
+        x.name.toLowerCase().includes(q) ||
+        (w != null && w.toLowerCase().includes(q))
+      );
+    });
+  }, [baseWhaleAlerts, walletQ, whaleSnapshotByMint]);
+
+  useEffect(() => {
+    if (filteredAlerts.length === 0) {
+      setWhaleSnapshotByMint({});
+      setRpcHoldersReady(true);
+      return;
+    }
+    setRpcHoldersReady(false);
+    let cancelled = false;
+    const mints = filteredAlerts.map((t) => t.address);
+    void (async () => {
+      const map = await fetchWhaleSnapshotsChunked(mints, 4);
+      if (cancelled) return;
+      setWhaleSnapshotByMint(map);
+      setRpcHoldersReady(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [filteredAlerts]);
+
+  /** 侧栏统计：仍按列表内代币流动性 / 24h 涨跌聚合（非单钱包资金流） */
   const sortedByNotional = useMemo(() => {
     return [...filteredAlerts].sort((a, b) => {
       const na = Math.max(a.volume_24h, a.liquidity * 0.25);
@@ -96,6 +154,10 @@ export function WhalesPage() {
   }, [filteredAlerts]);
 
   const leadToken = sortedByNotional[0] ?? null;
+  const leadWhaleWallet =
+    leadToken != null
+      ? (whaleSnapshotByMint[leadToken.address]?.ownerWallet ?? null)
+      : null;
 
   const topHoldingsRows = useMemo(() => {
     if (sortedByNotional.length === 0) return [];
@@ -198,6 +260,9 @@ export function WhalesPage() {
             {t('whalesPage.title')}{' '}
             <span className="text-primary-container">{t('whalesPage.version')}</span>
           </h1>
+          <p className="mt-3 max-w-xl font-label text-xs leading-relaxed text-on-surface/55">
+            {t('whalesPage.methodology')}
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-4 rounded-lg border border-outline-variant/15 bg-surface-container-low p-2">
@@ -269,11 +334,11 @@ export function WhalesPage() {
             <div className="flex items-center gap-4 font-label text-[10px] uppercase tracking-widest">
               <span className="flex items-center gap-1">
                 <span className="h-1.5 w-1.5 rounded-full bg-secondary" />
-                {t('whalesPage.legendInflow')}
+                {t('whalesPage.legendPriceUp')}
               </span>
               <span className="flex items-center gap-1">
                 <span className="h-1.5 w-1.5 rounded-full bg-error" />
-                {t('whalesPage.legendOutflow')}
+                {t('whalesPage.legendPriceDown')}
               </span>
             </div>
           </div>
@@ -292,8 +357,14 @@ export function WhalesPage() {
             ) : null}
             {filteredAlerts.map((tkn) => {
               const notional = Math.max(tkn.volume_24h, tkn.liquidity * 0.25);
+              const snap = whaleSnapshotByMint[tkn.address];
+              const holderUsdEst =
+                snap != null && tkn.price > 0
+                  ? snap.uiAmount * tkn.price
+                  : null;
+              const displayUsd = holderUsdEst ?? notional;
               const critical =
-                tkn.risk_score === 'D' && notional >= 120_000;
+                tkn.risk_score === 'D' && displayUsd >= 120_000;
               const kind: AlertKind = critical
                 ? 'critical'
                 : tkn.change_24h >= 0
@@ -306,13 +377,34 @@ export function WhalesPage() {
                     ? 'south_east'
                     : 'north_east';
               const iconFilled = kind === 'inflow' || kind === 'critical';
-              const badgeK = pickBadgeKey(kind, notional, tkn.change_24h);
+              const badgeK = pickBadgeKey(kind, displayUsd, tkn.change_24h);
               const flowLine = `${tkn.symbol} · ${formatUsdCompact(tkn.liquidity)}`;
+              const whaleWallet = snap?.ownerWallet ?? null;
+              const rowExplorerHref = snap?.recentSignature
+                ? TokenService.getSolscanTxUrl(snap.recentSignature)
+                : whaleWallet
+                  ? TokenService.getSolscanAccountUrl(whaleWallet)
+                  : whaleAlertSolscanFallbackUrl(tkn);
+
+              const openRowExplorer = () => {
+                const w = window.open(rowExplorerHref, '_blank');
+                if (w) w.opener = null;
+              };
 
               return (
                 <div
                   key={tkn.address}
-                  className={alertShellClass(kind)}
+                  role="button"
+                  tabIndex={0}
+                  className={`${alertShellClass(kind)} cursor-pointer`}
+                  onClick={openRowExplorer}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      openRowExplorer();
+                    }
+                  }}
+                  aria-label={t('whalesPage.openAlertRowOnExplorer')}
                 >
                   {kind === 'critical' ? (
                     <div className="pointer-events-none absolute inset-0 bg-primary/5 opacity-0 transition-opacity group-hover:opacity-100" />
@@ -331,20 +423,58 @@ export function WhalesPage() {
                       <div>
                         <div className="mb-1 flex flex-wrap items-center gap-2">
                           <span className="font-headline text-xl font-bold text-on-surface">
-                            {formatUsdCompact(notional)}
+                            {formatUsdCompact(displayUsd)}
                           </span>
                           <span className={badgeClass(kind)}>
                             {t(`whalesPage.${badgeK}`)}
                           </span>
                         </div>
+                        {snap ? (
+                          <p className="mb-1 font-mono text-[10px] text-on-surface/45">
+                            {t('whalesPage.holderLine', {
+                              amount: formatWhaleUiAmount(snap.uiAmount),
+                              symbol: tkn.symbol,
+                            })}
+                          </p>
+                        ) : null}
                         <div className="flex flex-wrap items-center gap-3 font-label text-[11px] uppercase tracking-wider text-outline">
-                          <span className="flex items-center gap-1">
-                            <MaterialIcon
-                              name="account_balance_wallet"
-                              className="text-xs"
-                            />
-                            {shortenAddress(tkn.address, 4)}
-                          </span>
+                          {whaleWallet ? (
+                            <a
+                              href={TokenService.getSolscanAccountUrl(
+                                whaleWallet
+                              )}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 text-inherit transition-colors hover:text-primary"
+                              aria-label={t('whalesPage.openWhaleWalletExplorer')}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MaterialIcon
+                                name="account_balance_wallet"
+                                className="text-xs"
+                              />
+                              {shortenAddress(whaleWallet, 4)}
+                            </a>
+                          ) : !rpcHoldersReady ? (
+                            <span
+                              className="flex items-center gap-1 text-on-surface/35"
+                              title={t('whalesPage.walletPendingHint')}
+                            >
+                              <MaterialIcon
+                                name="account_balance_wallet"
+                                className="text-xs"
+                              />
+                              {t('whalesPage.walletPending')}
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1 text-on-surface/35">
+                              <MaterialIcon
+                                name="account_balance_wallet"
+                                className="text-xs"
+                              />
+                              {t('whalesPage.holderRpcEmpty')}
+                            </span>
+                          )}
                           <span className="h-1 w-1 rounded-full bg-outline-variant" />
                           <span className="flex items-center gap-1">
                             <MaterialIcon name="history" className="text-xs" />
@@ -364,11 +494,12 @@ export function WhalesPage() {
                       </div>
                       <button
                         type="button"
-                        onClick={() =>
+                        onClick={(e) => {
+                          e.stopPropagation();
                           navigate(
                             `/tokens?mint=${encodeURIComponent(tkn.address)}`
-                          )
-                        }
+                          );
+                        }}
                         className="border border-outline-variant/30 p-2 text-outline transition-all hover:border-primary/50 hover:text-primary"
                         aria-label={t('whalesPage.viewTrace')}
                       >
@@ -409,47 +540,65 @@ export function WhalesPage() {
               </p>
             ) : (
               <>
-                <button
-                  type="button"
-                  onClick={() =>
-                    navigate(
-                      `/tokens?mint=${encodeURIComponent(leadToken.address)}`
-                    )
-                  }
-                  className="mb-8 flex w-full items-center gap-4 rounded-sm text-left transition-colors hover:bg-surface-container-high/60"
-                >
-                  <div className="relative shrink-0">
-                    <div className="flex h-16 w-16 items-center justify-center rounded border-2 border-primary/20 bg-surface-container-low">
-                      <span className="font-headline text-lg font-bold text-primary">
-                        {leadToken.symbol.slice(0, 2).toUpperCase()}
-                      </span>
+                <div className="mb-8">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      navigate(
+                        `/tokens?mint=${encodeURIComponent(leadToken.address)}`
+                      )
+                    }
+                    className="flex w-full items-center gap-4 rounded-sm text-left transition-colors hover:bg-surface-container-high/60"
+                  >
+                    <div className="relative shrink-0">
+                      <div className="flex h-16 w-16 items-center justify-center rounded border-2 border-primary/20 bg-surface-container-low">
+                        <span className="font-headline text-lg font-bold text-primary">
+                          {leadToken.symbol.slice(0, 2).toUpperCase()}
+                        </span>
+                      </div>
+                      {leadToken.risk_score === 'A' ||
+                      leadToken.risk_score === 'B' ? (
+                        <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border-2 border-surface bg-secondary-container">
+                          <MaterialIcon
+                            name="verified"
+                            className="text-[12px] text-on-secondary"
+                            filled
+                          />
+                        </span>
+                      ) : null}
                     </div>
-                    {leadToken.risk_score === 'A' ||
-                    leadToken.risk_score === 'B' ? (
-                      <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border-2 border-surface bg-secondary-container">
-                        <MaterialIcon
-                          name="verified"
-                          className="text-[12px] text-on-secondary"
-                          filled
-                        />
-                      </span>
-                    ) : null}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-label text-[9px] uppercase tracking-widest text-primary">
-                      {t('whalesPage.profileLeadLabel')}
-                    </p>
-                    <h4 className="font-headline truncate text-lg font-bold tracking-tight text-on-surface">
-                      {leadToken.symbol}
-                      <span className="ml-1 font-normal text-on-surface/50">
-                        · {leadToken.name}
-                      </span>
-                    </h4>
-                    <p className="truncate font-mono text-[11px] tracking-wider text-outline">
-                      {shortenAddress(leadToken.address, 5)}
-                    </p>
-                  </div>
-                </button>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-label text-[9px] uppercase tracking-widest text-primary">
+                        {t('whalesPage.profileLeadLabel')}
+                      </p>
+                      <h4 className="font-headline truncate text-lg font-bold tracking-tight text-on-surface">
+                        {leadToken.symbol}
+                        <span className="ml-1 font-normal text-on-surface/50">
+                          · {leadToken.name}
+                        </span>
+                      </h4>
+                    </div>
+                  </button>
+                  {leadWhaleWallet ? (
+                    <a
+                      href={TokenService.getSolscanAccountUrl(leadWhaleWallet)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1 block min-w-0 truncate pl-20 font-mono text-[11px] tracking-wider text-outline transition-colors hover:text-primary"
+                      aria-label={t('whalesPage.openWhaleWalletExplorer')}
+                    >
+                      {shortenAddress(leadWhaleWallet, 5)}
+                    </a>
+                  ) : !rpcHoldersReady ? (
+                    <span className="mt-1 block min-w-0 truncate pl-20 font-mono text-[11px] tracking-wider text-on-surface/35">
+                      {t('whalesPage.walletPending')}
+                    </span>
+                  ) : (
+                    <span className="mt-1 block min-w-0 truncate pl-20 font-mono text-[11px] tracking-wider text-on-surface/35">
+                      {t('whalesPage.holderRpcEmpty')}
+                    </span>
+                  )}
+                </div>
 
                 <div className="mb-8 space-y-4">
                   <div>

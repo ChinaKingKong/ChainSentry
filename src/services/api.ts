@@ -214,4 +214,13 @@ export class TokenService {
   static getSolscanUrl(tokenAddress: string): string {
     return `https://solscan.io/token/${tokenAddress}`;
   }
+
+  /** 任意账户（钱包 / 铸币账户等）在 Solscan 上的账户页，可查看链上交易记录 */
+  static getSolscanAccountUrl(address: string): string {
+    return `https://solscan.io/account/${address}`;
+  }
+
+  static getSolscanTxUrl(signature: string): string {
+    return `https://solscan.io/tx/${signature}`;
+  }
 }
