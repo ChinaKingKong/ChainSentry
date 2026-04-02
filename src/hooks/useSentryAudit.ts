@@ -6,6 +6,7 @@ import {
 } from '../services/mintAudit';
 import { TokenService } from '../services/api';
 import type { DexScreenerPair } from '../types/token';
+import { pushSentryRecentAnalysis } from '../lib/sentryRecentCache';
 import { tryParseSolanaAddress } from '../lib/solanaAddress';
 
 export type SentryTableStatus = 'passed' | 'warning' | 'failed';
@@ -59,6 +60,12 @@ export function useSentryAudit() {
       const best = await TokenService.getBestPairForMint(mint);
       if (gen !== scanGen.current) return;
       setPair(best);
+      const liqUsd = best?.liquidity?.usd ?? null;
+      const sc = computeSecurityScore(onChain, liqUsd);
+      const sym =
+        best?.baseToken?.symbol?.trim() ||
+        `${mint.slice(0, 4)}…${mint.slice(-4)}`;
+      pushSentryRecentAnalysis({ mint: onChain.mint, symbol: sym, score: sc });
     } catch {
       if (gen !== scanGen.current) return;
       setErrorKey('sentryErrors.auditFailed');

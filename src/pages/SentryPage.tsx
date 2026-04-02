@@ -8,6 +8,11 @@ import { formatUsdCompact } from '../lib/format';
 import { intlLocaleFor } from '../lib/intlLocale';
 import { formatRawAsDecimal } from '../services/jupiterQuote';
 import { riskToSentryScore } from '../lib/sentryScore';
+import {
+  readSentryRecentList,
+  SENTRY_RECENT_DISPLAY_LIMIT,
+  SENTRY_RECENT_UPDATED_EVENT,
+} from '../lib/sentryRecentCache';
 
 const CIRC = 2 * Math.PI * 45;
 
@@ -56,6 +61,22 @@ export function SentryPage() {
 
   const { tokens: watchTokens } = useTokens(8, false, 0);
   const [caQuery, setCaQuery] = useState('');
+  const [recentTick, setRecentTick] = useState(0);
+
+  useEffect(() => {
+    const onUpdate = () => setRecentTick((n) => n + 1);
+    window.addEventListener(SENTRY_RECENT_UPDATED_EVENT, onUpdate);
+    return () => window.removeEventListener(SENTRY_RECENT_UPDATED_EVENT, onUpdate);
+  }, []);
+
+  const recentFromCache = useMemo(() => {
+    void recentTick;
+    return readSentryRecentList()
+      .sort((a, b) => b.analyzedAt - a.analyzedAt)
+      .slice(0, SENTRY_RECENT_DISPLAY_LIMIT);
+  }, [recentTick]);
+
+  const useRecentCache = recentFromCache.length > 0;
 
   useEffect(() => {
     document.title = t('sentryPage.docTitle');
@@ -451,49 +472,94 @@ export function SentryPage() {
       </div>
 
       <div className="relative z-10 pt-6">
-        <h3 className="mb-4 font-label text-[10px] uppercase tracking-[0.2em] text-outline">
+        <h3 className="mb-1 font-label text-[10px] uppercase tracking-[0.2em] text-outline">
           {t('sentryPage.recentTitle')}
         </h3>
+        <p className="mb-4 text-[10px] text-on-surface-variant/65">
+          {useRecentCache
+            ? t('sentryPage.recentCacheHint')
+            : t('sentryPage.recentFallbackHint')}
+        </p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {watchTokens.map((tok) => {
-            const sc = riskToSentryScore(tok.risk_score);
-            const critical = tok.risk_score === 'D';
-            const secure = tok.risk_score === 'A' || tok.risk_score === 'B';
-            return (
-              <button
-                key={tok.address}
-                type="button"
-                onClick={() =>
-                  navigate(`/tokens?mint=${encodeURIComponent(tok.address)}`)
-                }
-                className={`group cursor-pointer border border-outline-variant/10 bg-surface-container-lowest p-4 text-left transition-all ${critical ? 'hover:border-error/40' : 'hover:border-primary/40'}`}
-              >
-                <div className="mb-3 flex justify-between">
-                  <span className="font-headline text-xs font-bold">
-                    {tok.symbol}
-                  </span>
-                  <span
-                    className={`font-label text-[10px] ${secure ? 'text-secondary' : critical ? 'text-error' : 'text-tertiary-container'}`}
+          {useRecentCache
+            ? recentFromCache.map((row) => {
+                const sc = row.score;
+                const critical = sc < 48;
+                const secure = sc >= 72;
+                return (
+                  <button
+                    key={row.mint}
+                    type="button"
+                    onClick={() =>
+                      navigate(`/tokens?mint=${encodeURIComponent(row.mint)}`)
+                    }
+                    className={`group cursor-pointer border border-outline-variant/10 bg-surface-container-lowest p-4 text-left transition-all ${critical ? 'hover:border-error/40' : 'hover:border-primary/40'}`}
                   >
-                    {critical
-                      ? t('sentryPage.statusCritical')
-                      : secure
-                        ? t('sentryPage.statusSecure')
-                        : t('sentryPage.statusWarning')}
-                  </span>
-                </div>
-                <div className="mb-2 truncate font-label text-[10px] opacity-40">
-                  {tok.address.slice(0, 4)}…{tok.address.slice(-4)}
-                </div>
-                <div className="flex items-center justify-between font-label text-[10px] text-on-surface-variant">
-                  <span>
-                    {t('sentryPage.scoreLabel')}: {sc}/100
-                  </span>
-                  <span>{t('whalesPage.feedLive')}</span>
-                </div>
-              </button>
-            );
-          })}
+                    <div className="mb-3 flex justify-between">
+                      <span className="font-headline text-xs font-bold">
+                        {row.symbol}
+                      </span>
+                      <span
+                        className={`font-label text-[10px] ${secure ? 'text-secondary' : critical ? 'text-error' : 'text-tertiary-container'}`}
+                      >
+                        {critical
+                          ? t('sentryPage.statusCritical')
+                          : secure
+                            ? t('sentryPage.statusSecure')
+                            : t('sentryPage.statusWarning')}
+                      </span>
+                    </div>
+                    <div className="mb-2 truncate font-label text-[10px] opacity-40">
+                      {row.mint.slice(0, 4)}…{row.mint.slice(-4)}
+                    </div>
+                    <div className="flex items-center justify-between font-label text-[10px] text-on-surface-variant">
+                      <span>
+                        {t('sentryPage.scoreLabel')}: {sc}/100
+                      </span>
+                      <span>{t('sentryPage.recentScanBadge')}</span>
+                    </div>
+                  </button>
+                );
+              })
+            : watchTokens.slice(0, SENTRY_RECENT_DISPLAY_LIMIT).map((tok) => {
+                const sc = riskToSentryScore(tok.risk_score);
+                const critical = tok.risk_score === 'D';
+                const secure = tok.risk_score === 'A' || tok.risk_score === 'B';
+                return (
+                  <button
+                    key={tok.address}
+                    type="button"
+                    onClick={() =>
+                      navigate(`/tokens?mint=${encodeURIComponent(tok.address)}`)
+                    }
+                    className={`group cursor-pointer border border-outline-variant/10 bg-surface-container-lowest p-4 text-left transition-all ${critical ? 'hover:border-error/40' : 'hover:border-primary/40'}`}
+                  >
+                    <div className="mb-3 flex justify-between">
+                      <span className="font-headline text-xs font-bold">
+                        {tok.symbol}
+                      </span>
+                      <span
+                        className={`font-label text-[10px] ${secure ? 'text-secondary' : critical ? 'text-error' : 'text-tertiary-container'}`}
+                      >
+                        {critical
+                          ? t('sentryPage.statusCritical')
+                          : secure
+                            ? t('sentryPage.statusSecure')
+                            : t('sentryPage.statusWarning')}
+                      </span>
+                    </div>
+                    <div className="mb-2 truncate font-label text-[10px] opacity-40">
+                      {tok.address.slice(0, 4)}…{tok.address.slice(-4)}
+                    </div>
+                    <div className="flex items-center justify-between font-label text-[10px] text-on-surface-variant">
+                      <span>
+                        {t('sentryPage.scoreLabel')}: {sc}/100
+                      </span>
+                      <span>{t('whalesPage.feedLive')}</span>
+                    </div>
+                  </button>
+                );
+              })}
         </div>
       </div>
     </div>
