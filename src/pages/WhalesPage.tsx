@@ -100,6 +100,10 @@ export function WhalesPage() {
   const [poolTxSigByMint, setPoolTxSigByMint] = useState<Record<string, string>>(
     {}
   );
+  /** 眼睛按钮：右侧「活跃档案」聚焦该 mint 对应巨鲸（同钱包在列表内合并） */
+  const [selectedProfileMint, setSelectedProfileMint] = useState<string | null>(
+    null
+  );
   const [rpcHoldersReady, setRpcHoldersReady] = useState(false);
   const memeFeed = useTokens(200, true, WHALES_MARKET_REFRESH_MS, 'meme');
   const defiFeed = useTokens(200, true, WHALES_MARKET_REFRESH_MS, 'defi');
@@ -152,28 +156,35 @@ export function WhalesPage() {
       if (!opts?.silent) {
         setRpcHoldersReady(false);
       }
-      const mints = list.map((t) => t.address);
-      const map = await fetchWhaleSnapshotsChunked(mints, 4);
-      if (gen !== whaleRpcGenRef.current) return;
-      setWhaleSnapshotByMint(map);
-
-      const needPoolTx = list.filter((t) => !map[t.address]?.recentSignature);
-      const sigByMint: Record<string, string> = {};
-      const CHUNK = 4;
-      for (let i = 0; i < needPoolTx.length; i += CHUNK) {
+      try {
+        const mints = list.map((t) => t.address);
+        const map = await fetchWhaleSnapshotsChunked(mints, 4);
         if (gen !== whaleRpcGenRef.current) return;
-        const slice = needPoolTx.slice(i, i + CHUNK);
-        const part = await Promise.all(
-          slice.map((tkn) => fetchLatestTxForWhaleAlert(tkn))
-        );
-        slice.forEach((tkn, j) => {
-          const sig = part[j];
-          if (sig) sigByMint[tkn.address] = sig;
-        });
+        setWhaleSnapshotByMint(map);
+
+        const needPoolTx = list.filter((t) => !map[t.address]?.recentSignature);
+        const sigByMint: Record<string, string> = {};
+        const CHUNK = 4;
+        for (let i = 0; i < needPoolTx.length; i += CHUNK) {
+          if (gen !== whaleRpcGenRef.current) return;
+          const slice = needPoolTx.slice(i, i + CHUNK);
+          const part = await Promise.all(
+            slice.map((tkn) => fetchLatestTxForWhaleAlert(tkn))
+          );
+          slice.forEach((tkn, j) => {
+            const sig = part[j];
+            if (sig) sigByMint[tkn.address] = sig;
+          });
+        }
+        if (gen !== whaleRpcGenRef.current) return;
+        setPoolTxSigByMint(sigByMint);
+      } catch (e) {
+        console.error('Whale holder RPC batch failed:', e);
+      } finally {
+        if (gen === whaleRpcGenRef.current) {
+          setRpcHoldersReady(true);
+        }
       }
-      if (gen !== whaleRpcGenRef.current) return;
-      setPoolTxSigByMint(sigByMint);
-      setRpcHoldersReady(true);
     },
     []
   );
@@ -232,6 +243,82 @@ export function WhalesPage() {
     const up = sortedByNotional.filter((t) => t.change_24h >= 0).length;
     return Math.round((100 * up) / sortedByNotional.length);
   }, [sortedByNotional]);
+
+  const profileToken = useMemo(() => {
+    if (!selectedProfileMint) return null;
+    return (
+      filteredAlerts.find((t) => t.address === selectedProfileMint) ?? null
+    );
+  }, [selectedProfileMint, filteredAlerts]);
+
+  useEffect(() => {
+    if (selectedProfileMint && !profileToken) setSelectedProfileMint(null);
+  }, [selectedProfileMint, profileToken]);
+
+  const profileWhaleWallet =
+    profileToken != null
+      ? (whaleSnapshotByMint[profileToken.address]?.ownerWallet ?? null)
+      : null;
+
+  const profileRelatedAlerts = useMemo(() => {
+    if (!profileToken) return [];
+    const w = profileWhaleWallet;
+    if (!w) return [profileToken];
+    return filteredAlerts.filter(
+      (t) => whaleSnapshotByMint[t.address]?.ownerWallet === w
+    );
+  }, [profileToken, profileWhaleWallet, filteredAlerts, whaleSnapshotByMint]);
+
+  const profileTopHoldings = useMemo(() => {
+    if (profileRelatedAlerts.length === 0) return [];
+    const rows = profileRelatedAlerts.map((t) => {
+      const snap = whaleSnapshotByMint[t.address];
+      const usd =
+        snap != null && t.price > 0
+          ? snap.uiAmount * t.price
+          : Math.max(t.volume_24h, t.liquidity * 0.25);
+      return { token: t, usd };
+    });
+    rows.sort((a, b) => b.usd - a.usd);
+    const total = rows.reduce((s, r) => s + r.usd, 0) || 1;
+    return rows.slice(0, 8).map((r) => ({
+      token: r.token,
+      pct: (r.usd / total) * 100,
+    }));
+  }, [profileRelatedAlerts, whaleSnapshotByMint]);
+
+  const profileTotalUsd = useMemo(() => {
+    return profileRelatedAlerts.reduce((s, t) => {
+      const snap = whaleSnapshotByMint[t.address];
+      const usd =
+        snap != null && t.price > 0
+          ? snap.uiAmount * t.price
+          : Math.max(t.volume_24h, t.liquidity * 0.25);
+      return s + usd;
+    }, 0);
+  }, [profileRelatedAlerts, whaleSnapshotByMint]);
+
+  const profilePositive24hPct = useMemo(() => {
+    if (profileRelatedAlerts.length === 0) return null;
+    const up = profileRelatedAlerts.filter((t) => t.change_24h >= 0).length;
+    return Math.round((100 * up) / profileRelatedAlerts.length);
+  }, [profileRelatedAlerts]);
+
+  const profileFocusActive = profileToken != null;
+
+  const displayLeadToken = profileFocusActive ? profileToken : leadToken;
+  const displayWhaleWallet = profileFocusActive
+    ? profileWhaleWallet
+    : leadWhaleWallet;
+  const displayTopHoldings = profileFocusActive
+    ? profileTopHoldings
+    : topHoldingsRows;
+  const displayTotalUsd = profileFocusActive
+    ? profileTotalUsd
+    : totalTrackedLiquidity;
+  const displayPositivePct = profileFocusActive
+    ? profilePositive24hPct
+    : samplePositive24hPct;
 
   const flow24h = useMemo(() => {
     let volUp = 0;
@@ -453,12 +540,14 @@ export function WhalesPage() {
                 if (w) w.opener = null;
               };
 
+              const rowSelected = selectedProfileMint === tkn.address;
+
               return (
                 <div
                   key={tkn.address}
                   role="button"
                   tabIndex={0}
-                  className={`${alertShellClass(kind)} cursor-pointer`}
+                  className={`${alertShellClass(kind)} cursor-pointer ${rowSelected ? 'ring-2 ring-primary-container/70 ring-offset-2 ring-offset-surface' : ''}`}
                   onClick={openRowExplorer}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -558,12 +647,17 @@ export function WhalesPage() {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(
-                            `/tokens?mint=${encodeURIComponent(tkn.address)}`
+                          setSelectedProfileMint((prev) =>
+                            prev === tkn.address ? null : tkn.address
                           );
                         }}
-                        className="border border-outline-variant/30 p-2 text-outline transition-all hover:border-primary/50 hover:text-primary"
-                        aria-label={t('whalesPage.viewTrace')}
+                        className={`border p-2 transition-all hover:border-primary/50 hover:text-primary ${
+                          rowSelected
+                            ? 'border-primary/60 bg-primary/10 text-primary'
+                            : 'border-outline-variant/30 text-outline'
+                        }`}
+                        aria-label={t('whalesPage.viewWhaleProfile')}
+                        aria-pressed={rowSelected}
                       >
                         <MaterialIcon name="visibility" />
                       </button>
@@ -577,16 +671,34 @@ export function WhalesPage() {
 
         <div className="space-y-8 lg:col-span-4">
           <div className="rounded-sm border border-outline-variant/15 bg-surface-container-low p-6">
-            <div className="mb-6 flex items-center justify-between">
-              <h3 className="font-label text-xs font-bold uppercase tracking-[0.2em] text-primary">
-                {t('whalesPage.activeProfile')}
-              </h3>
-              <div className="flex items-center gap-2">
-                <span className="font-label text-[10px] uppercase text-secondary">
-                  {t('whalesPage.following')}
-                </span>
-                <div className="flex h-4 w-8 items-center rounded-full bg-secondary/20 px-0.5">
-                  <div className="ml-auto h-3 w-3 rounded-full bg-secondary" />
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <h3 className="font-label text-xs font-bold uppercase tracking-[0.2em] text-primary">
+                  {t('whalesPage.activeProfile')}
+                </h3>
+                {profileFocusActive ? (
+                  <p className="mt-1 font-label text-[9px] leading-snug text-on-surface-variant/80">
+                    {t('whalesPage.profileFocusedHint')}
+                  </p>
+                ) : null}
+              </div>
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                {profileFocusActive ? (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedProfileMint(null)}
+                    className="rounded-sm border border-outline-variant/35 px-2.5 py-1 font-label text-[9px] uppercase tracking-wider text-on-surface-variant transition-colors hover:border-primary/40 hover:text-primary"
+                  >
+                    {t('whalesPage.profileBackToGlobal')}
+                  </button>
+                ) : null}
+                <div className="flex items-center gap-2">
+                  <span className="font-label text-[10px] uppercase text-secondary">
+                    {t('whalesPage.following')}
+                  </span>
+                  <div className="flex h-4 w-8 items-center rounded-full bg-secondary/20 px-0.5">
+                    <div className="ml-auto h-3 w-3 rounded-full bg-secondary" />
+                  </div>
                 </div>
               </div>
             </div>
@@ -596,7 +708,7 @@ export function WhalesPage() {
                 <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary-container border-t-transparent" />
                 <span className="font-headline text-xs">{t('dashboard.syncing')}</span>
               </div>
-            ) : !leadToken ? (
+            ) : !displayLeadToken ? (
               <p className="py-8 text-center text-sm text-on-surface-variant">
                 {t('whalesPage.profileEmpty')}
               </p>
@@ -607,21 +719,21 @@ export function WhalesPage() {
                     type="button"
                     onClick={() =>
                       navigate(
-                        `/tokens?mint=${encodeURIComponent(leadToken.address)}`
+                        `/tokens?mint=${encodeURIComponent(displayLeadToken.address)}`
                       )
                     }
                     className="flex w-full items-center gap-4 rounded-sm text-left transition-colors hover:bg-surface-container-high/60"
                   >
                     <div className="relative shrink-0">
                       <TokenLogo
-                        logoUri={leadToken.logo_uri}
-                        symbol={leadToken.symbol}
+                        logoUri={displayLeadToken.logo_uri}
+                        symbol={displayLeadToken.symbol}
                         className="h-16 w-16 shrink-0"
                         fallbackFrameClassName="border-2 border-primary/20 bg-surface-container-low"
                         fallbackClassName="text-lg font-bold text-primary"
                       />
-                      {leadToken.risk_score === 'A' ||
-                      leadToken.risk_score === 'B' ? (
+                      {displayLeadToken.risk_score === 'A' ||
+                      displayLeadToken.risk_score === 'B' ? (
                         <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border-2 border-surface bg-secondary-container">
                           <MaterialIcon
                             name="verified"
@@ -633,25 +745,27 @@ export function WhalesPage() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="font-label text-[9px] uppercase tracking-widest text-primary">
-                        {t('whalesPage.profileLeadLabel')}
+                        {profileFocusActive
+                          ? t('whalesPage.profileContextLabel')
+                          : t('whalesPage.profileLeadLabel')}
                       </p>
                       <h4 className="font-headline truncate text-lg font-bold tracking-tight text-on-surface">
-                        {leadToken.symbol}
+                        {displayLeadToken.symbol}
                         <span className="ml-1 font-normal text-on-surface/50">
-                          · {leadToken.name}
+                          · {displayLeadToken.name}
                         </span>
                       </h4>
                     </div>
                   </button>
-                  {leadWhaleWallet ? (
+                  {displayWhaleWallet ? (
                     <a
-                      href={TokenService.getSolscanAccountUrl(leadWhaleWallet)}
+                      href={TokenService.getSolscanAccountUrl(displayWhaleWallet)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="mt-1 block min-w-0 truncate pl-20 font-mono text-[11px] tracking-wider text-outline transition-colors hover:text-primary"
                       aria-label={t('whalesPage.openWhaleWalletExplorer')}
                     >
-                      {shortenAddress(leadWhaleWallet, 5)}
+                      {shortenAddress(displayWhaleWallet, 5)}
                     </a>
                   ) : !rpcHoldersReady ? (
                     <span className="mt-1 block min-w-0 truncate pl-20 font-mono text-[11px] tracking-wider text-on-surface/35">
@@ -667,11 +781,15 @@ export function WhalesPage() {
                 <div className="mb-8 space-y-4">
                   <div>
                     <div className="mb-1.5 flex justify-between font-label text-[10px] uppercase tracking-widest text-outline">
-                      <span>{t('whalesPage.topHoldings')}</span>
+                      <span>
+                        {profileFocusActive
+                          ? t('whalesPage.topHoldingsProfile')
+                          : t('whalesPage.topHoldings')}
+                      </span>
                       <span>{t('whalesPage.allocation')}</span>
                     </div>
                     <div className="space-y-2">
-                      {topHoldingsRows.map(({ token: tok, pct }) => (
+                      {displayTopHoldings.map(({ token: tok, pct }) => (
                         <div
                           key={tok.address}
                           className="flex items-center justify-between"
@@ -703,10 +821,12 @@ export function WhalesPage() {
                       {t('whalesPage.totalValue')}
                     </div>
                     <div className="font-headline text-sm font-bold text-on-surface">
-                      {formatUsdCompact(totalTrackedLiquidity)}
+                      {formatUsdCompact(displayTotalUsd)}
                     </div>
                     <p className="mt-1 font-label text-[9px] text-on-surface/45">
-                      {t('whalesPage.totalValueHint')}
+                      {profileFocusActive
+                        ? t('whalesPage.totalValueHintProfile')
+                        : t('whalesPage.totalValueHint')}
                     </p>
                   </div>
                   <div className="rounded-sm border border-outline-variant/10 bg-surface-container-high p-3">
@@ -714,12 +834,14 @@ export function WhalesPage() {
                       {t('whalesPage.samplePositive24h')}
                     </div>
                     <div className="font-headline text-sm font-bold text-secondary">
-                      {samplePositive24hPct != null
-                        ? `${samplePositive24hPct}%`
+                      {displayPositivePct != null
+                        ? `${displayPositivePct}%`
                         : '—'}
                     </div>
                     <p className="mt-1 font-label text-[9px] text-on-surface/45">
-                      {t('whalesPage.samplePositive24hHint')}
+                      {profileFocusActive
+                        ? t('whalesPage.samplePositive24hHintProfile')
+                        : t('whalesPage.samplePositive24hHint')}
                     </p>
                   </div>
                 </div>
