@@ -18,7 +18,7 @@ export function buildSolanaPooledFetch(
     return (input, init) => fetch(input, init);
   }
   let rr = 0;
-  return async (input: RequestInfo | URL, init?: RequestInit) => {
+  return async (_input: RequestInfo | URL, init?: RequestInit) => {
     const i0 = rr % list.length;
     rr = (rr + 1) % list.length;
     const reqInit = init ?? {};
