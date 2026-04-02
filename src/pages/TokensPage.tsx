@@ -114,22 +114,32 @@ export function TokensPage() {
     };
   }, [t, i18n]);
 
-  const token: Token | null = useMemo(() => {
-    if (tokens.length === 0) return null;
-    if (mint) {
-      const hit = tokens.find((x) => x.address === mint);
-      if (hit) return hit;
-    }
-    return tokens[0];
-  }, [mint, tokens]);
-
-  /** 与指挥台一致：≥10 万 U、有 Dex 图标、排除稳定币 */
+  /** 与指挥台一致：≥10 万 U、有 Dex 图标、排除稳定币（关注列表顺序） */
   const tokensForSelect = useMemo(() => {
     if (tokens.length === 0) return [];
     return tokens
       .filter(passesFocusDashboardTokenRules)
       .sort((a, b) => b.liquidity - a.liquidity);
   }, [tokens]);
+
+  const token: Token | null = useMemo(() => {
+    if (tokens.length === 0) return null;
+    if (mint) {
+      const hit = tokens.find((x) => x.address === mint);
+      if (hit) return hit;
+    }
+    /** 直进 /tokens：与下拉第一项一致；无合格项时退回原始 feed 首条 */
+    return tokensForSelect[0] ?? tokens[0] ?? null;
+  }, [mint, tokens, tokensForSelect]);
+
+  /** 无 query 时把默认代币写入 URL，避免刷新丢上下文且与列表第一项一致 */
+  useEffect(() => {
+    if (mint) return;
+    if (loading) return;
+    const first = tokensForSelect[0] ?? tokens[0];
+    if (!first?.address) return;
+    setParams({ mint: first.address }, { replace: true });
+  }, [loading, mint, setParams, tokens, tokensForSelect]);
 
   const jupiterQuote = useJupiterSwapQuote(
     token?.address,
