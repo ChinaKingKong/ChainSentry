@@ -140,7 +140,7 @@ export function useSentryAudit() {
           audit.transferFeeBasisPoints === 0
             ? 'taxEvidenceZero'
             : 'taxEvidenceActive',
-        evidenceParams:
+        evidenceParams: (
           audit.transferFeeBasisPoints === 0
             ? {
                 program:
@@ -149,7 +149,8 @@ export function useSentryAudit() {
             : {
                 pct: (audit.transferFeeBasisPoints / 100).toFixed(2),
                 bps: audit.transferFeeBasisPoints,
-              },
+              }
+        ) as Record<string, string | number>,
         timeLabel,
       },
     ];
