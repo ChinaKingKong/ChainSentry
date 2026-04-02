@@ -1,5 +1,9 @@
 import { PublicKey } from '@solana/web3.js';
+import { withTimeout } from '../lib/withTimeout';
 import { getSolanaConnection } from './solanaRpc';
+
+/** 单 mint 链上拉取上限；公共 RPC 常无 fetch 超时，避免整页永远「拉取持仓中」 */
+const WHALE_HOLDER_RPC_MS = 22_000;
 
 export type WhaleHolderSnapshot = {
   /** SPL token account（最大持仓） */
@@ -21,13 +25,17 @@ function splTokenAccountOwner(
     'parsed' in data &&
     'program' in data
   ) {
-    const d = data as { program: string; parsed: { type?: string; info?: { owner?: string } } };
+    const d = data as {
+      program: string;
+      parsed: { type?: string; info?: Record<string, unknown> };
+    };
     const prog = d.program;
     if (prog !== 'spl-token' && prog !== 'spl-token-2022') return null;
     const p = d.parsed;
-    if (p?.type === 'account' && typeof p.info?.owner === 'string') {
-      return { owner: p.info.owner };
-    }
+    if (p?.type !== 'account' || !p.info || typeof p.info !== 'object')
+      return null;
+    const ow = p.info.owner;
+    if (typeof ow === 'string' && ow.length > 0) return { owner: ow };
   }
   return null;
 }
@@ -36,11 +44,9 @@ function splTokenAccountOwner(
  * 巨鲸定义：指定 mint 在链上「最大单一 token 账户」的持有者（RPC 快照）。
  * 该账户可能是 LP 池、做市程序等，owner 仍为链上可查实体。
  */
-export async function fetchWhaleHolderSnapshot(
-  mintAddress: string
+async function fetchWhaleHolderSnapshotInner(
+  mintStr: string
 ): Promise<WhaleHolderSnapshot | null> {
-  const mintStr = mintAddress?.trim();
-  if (!mintStr) return null;
   try {
     const conn = getSolanaConnection();
     const mintPk = new PublicKey(mintStr);
@@ -84,13 +90,38 @@ export async function fetchWhaleHolderSnapshot(
   }
 }
 
-/** 分块并发，减轻公共 RPC 瞬时压力 */
+export async function fetchWhaleHolderSnapshot(
+  mintAddress: string
+): Promise<WhaleHolderSnapshot | null> {
+  const mintStr = mintAddress?.trim();
+  if (!mintStr) return null;
+  try {
+    return await withTimeout(
+      fetchWhaleHolderSnapshotInner(mintStr),
+      WHALE_HOLDER_RPC_MS
+    );
+  } catch {
+    return null;
+  }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+/**
+ * 分小块 + 块间停顿，降低公共 RPC 429（每 mint 多路 RPC，并发 4 很容易打满限额）。
+ */
 export async function fetchWhaleSnapshotsChunked(
   mints: string[],
-  chunkSize = 4
+  chunkSize = 2,
+  delayMsBetweenChunks = 400
 ): Promise<Record<string, WhaleHolderSnapshot>> {
   const out: Record<string, WhaleHolderSnapshot> = {};
   for (let i = 0; i < mints.length; i += chunkSize) {
+    if (i > 0 && delayMsBetweenChunks > 0) {
+      await sleep(delayMsBetweenChunks);
+    }
     const slice = mints.slice(i, i + chunkSize);
     const part = await Promise.all(
       slice.map(async (mint) => {

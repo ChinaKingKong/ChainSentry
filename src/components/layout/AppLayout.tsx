@@ -28,7 +28,8 @@ export function AppLayout() {
     }
   }, [location.pathname, t]);
 
-  const { stats, loading: chainLoading, activityIndex } = useSolanaChain(8000);
+  /** 全站共用一条链上轻量轮询；8s 过密易与巨鲸页等 RPC 叠乘 */
+  const { stats, loading: chainLoading, activityIndex } = useSolanaChain(30_000);
   const rpcConnected = !chainLoading && stats != null;
   const slotDisplay = stats != null ? stats.slot.toLocaleString() : '…';
 

@@ -1,5 +1,8 @@
 import { PublicKey } from '@solana/web3.js';
+import { withTimeout } from '../lib/withTimeout';
 import { getSolanaConnection } from './solanaRpc';
+
+const WHALE_PAIR_TX_RPC_MS = 14_000;
 
 export type PairActivityRow = {
   signature: string;
@@ -31,8 +34,7 @@ export async function fetchRecentPairSignatures(
   }
 }
 
-/** 优先池地址、否则 mint：最近一笔成功签名，供整行跳转 Solscan 交易页 */
-export async function fetchLatestTxForWhaleAlert(tkn: {
+async function fetchLatestTxForWhaleAlertInner(tkn: {
   pair_address: string;
   address: string;
 }): Promise<string | null> {
@@ -45,5 +47,20 @@ export async function fetchLatestTxForWhaleAlert(tkn: {
   if (!mint) return null;
   const fromMint = await fetchRecentPairSignatures(mint, 25);
   return fromMint[0]?.signature ?? null;
+}
+
+/** 优先池地址、否则 mint：最近一笔成功签名，供整行跳转 Solscan 交易页 */
+export async function fetchLatestTxForWhaleAlert(tkn: {
+  pair_address: string;
+  address: string;
+}): Promise<string | null> {
+  try {
+    return await withTimeout(
+      fetchLatestTxForWhaleAlertInner(tkn),
+      WHALE_PAIR_TX_RPC_MS
+    );
+  } catch {
+    return null;
+  }
 }
 

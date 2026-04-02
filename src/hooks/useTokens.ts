@@ -11,7 +11,9 @@ export function useTokens(
   limit: number = 20,
   autoRefresh: boolean = false,
   refreshInterval: number = 30000,
-  category: TokenFeedCategory = 'meme'
+  category: TokenFeedCategory = 'meme',
+  /** 错开多路 feed 的首包与轮询，减轻 Dex 瞬时 QPS */
+  startDelayMs: number = 0
 ) {
   const [tokens, setTokens] = useState<Token[]>([]);
   const [loading, setLoading] = useState(false);
@@ -36,13 +38,18 @@ export function useTokens(
   }, [limit, category]);
 
   useEffect(() => {
-    void fetchTokens();
-
-    if (autoRefresh) {
-      const interval = setInterval(() => void fetchTokens(), refreshInterval);
-      return () => clearInterval(interval);
-    }
-  }, [fetchTokens, autoRefresh, refreshInterval]);
+    let interval: ReturnType<typeof setInterval> | undefined;
+    const startTimer = window.setTimeout(() => {
+      void fetchTokens();
+      if (autoRefresh) {
+        interval = window.setInterval(() => void fetchTokens(), refreshInterval);
+      }
+    }, startDelayMs);
+    return () => {
+      window.clearTimeout(startTimer);
+      if (interval != null) window.clearInterval(interval);
+    };
+  }, [fetchTokens, autoRefresh, refreshInterval, startDelayMs]);
 
   return {
     tokens,

@@ -31,10 +31,10 @@ const MIN_THRESH: Record<string, number> = {
   '1m': 1_000_000,
 };
 
-/** DexScreener 列表轮询间隔 */
-const WHALES_MARKET_REFRESH_MS = 25_000;
-/** 链上巨鲸快照 / 池交易签名额外轮询（与行情解耦，避免长时间不触链上） */
-const WHALES_RPC_REFRESH_MS = 40_000;
+/** DexScreener：meme+defi 双 feed，每次各会打大量 /search，不宜过频 */
+const WHALES_MARKET_REFRESH_MS = 60_000;
+/** 链上巨鲸快照补全；一批 mint RPC 很重，分钟级即可 */
+const WHALES_RPC_REFRESH_MS = 120_000;
 
 function alertShellClass(kind: AlertKind): string {
   const base =
@@ -105,8 +105,15 @@ export function WhalesPage() {
     null
   );
   const [rpcHoldersReady, setRpcHoldersReady] = useState(false);
-  const memeFeed = useTokens(200, true, WHALES_MARKET_REFRESH_MS, 'meme');
-  const defiFeed = useTokens(200, true, WHALES_MARKET_REFRESH_MS, 'defi');
+  const memeFeed = useTokens(200, true, WHALES_MARKET_REFRESH_MS, 'meme', 0);
+  /** 与 meme 错开半周期，避免同一秒触发两整轮 Dex search */
+  const defiFeed = useTokens(
+    200,
+    true,
+    WHALES_MARKET_REFRESH_MS,
+    'defi',
+    Math.round(WHALES_MARKET_REFRESH_MS / 2)
+  );
   const tokensLoading = memeFeed.loading || defiFeed.loading;
   const tokens = useMemo(
     () => mergeTokensByMint([memeFeed.tokens, defiFeed.tokens], 96),
@@ -140,34 +147,59 @@ export function WhalesPage() {
     });
   }, [baseWhaleAlerts, walletQ, whaleSnapshotByMint]);
 
-  const filteredAlertsRef = useRef(filteredAlerts);
-  filteredAlertsRef.current = filteredAlerts;
+  const baseWhaleAlertsRef = useRef(baseWhaleAlerts);
+  baseWhaleAlertsRef.current = baseWhaleAlerts;
+
+  /**
+   * 巨鲸 RPC 只跟「基础列表」mint 集合走，不用 filteredAlerts：
+   * - 筛选依赖 whaleSnapshotByMint 时，filtered 成员会变 → key 抖动 → 反复 setRpcHoldersReady(false)
+   * - 一次拉齐 base 上 24 个 mint，右侧/列表按筛选读同一张 map 即可
+   */
+  const alertsRpcKey = useMemo(
+    () =>
+      [...baseWhaleAlerts]
+        .map((t) => t.address)
+        .sort()
+        .join('|'),
+    [baseWhaleAlerts]
+  );
+
+  /** 并发中的巨鲸 RPC 批次数；归零时务必结束「拉取持仓中」 */
+  const whaleRpcInflightRef = useRef(0);
   const whaleRpcGenRef = useRef(0);
 
   const executeWhaleRpc = useCallback(
     async (list: Token[], opts?: { silent?: boolean }) => {
-      const gen = ++whaleRpcGenRef.current;
       if (list.length === 0) {
         setWhaleSnapshotByMint({});
         setPoolTxSigByMint({});
         setRpcHoldersReady(true);
         return;
       }
-      if (!opts?.silent) {
+
+      whaleRpcInflightRef.current += 1;
+      const gen = ++whaleRpcGenRef.current;
+      const silent = Boolean(opts?.silent);
+      if (!silent) {
         setRpcHoldersReady(false);
       }
+
       try {
         const mints = list.map((t) => t.address);
-        const map = await fetchWhaleSnapshotsChunked(mints, 4);
+        const map = await fetchWhaleSnapshotsChunked(mints, 1, 550);
         if (gen !== whaleRpcGenRef.current) return;
         setWhaleSnapshotByMint(map);
 
         const needPoolTx = list.filter((t) => !map[t.address]?.recentSignature);
         const sigByMint: Record<string, string> = {};
-        const CHUNK = 4;
-        for (let i = 0; i < needPoolTx.length; i += CHUNK) {
+        const POOL_TX_CHUNK = 1;
+        const POOL_TX_GAP_MS = 450;
+        for (let i = 0; i < needPoolTx.length; i += POOL_TX_CHUNK) {
+          if (i > 0) {
+            await new Promise((r) => setTimeout(r, POOL_TX_GAP_MS));
+          }
           if (gen !== whaleRpcGenRef.current) return;
-          const slice = needPoolTx.slice(i, i + CHUNK);
+          const slice = needPoolTx.slice(i, i + POOL_TX_CHUNK);
           const part = await Promise.all(
             slice.map((tkn) => fetchLatestTxForWhaleAlert(tkn))
           );
@@ -181,7 +213,8 @@ export function WhalesPage() {
       } catch (e) {
         console.error('Whale holder RPC batch failed:', e);
       } finally {
-        if (gen === whaleRpcGenRef.current) {
+        whaleRpcInflightRef.current = Math.max(0, whaleRpcInflightRef.current - 1);
+        if (whaleRpcInflightRef.current === 0) {
           setRpcHoldersReady(true);
         }
       }
@@ -190,12 +223,15 @@ export function WhalesPage() {
   );
 
   useEffect(() => {
-    void executeWhaleRpc(filteredAlerts);
-  }, [filteredAlerts, executeWhaleRpc]);
+    const id = window.setTimeout(() => {
+      void executeWhaleRpc(baseWhaleAlertsRef.current);
+    }, 300);
+    return () => window.clearTimeout(id);
+  }, [alertsRpcKey, executeWhaleRpc]);
 
   useEffect(() => {
     const id = window.setInterval(() => {
-      void executeWhaleRpc(filteredAlertsRef.current, { silent: true });
+      void executeWhaleRpc(baseWhaleAlertsRef.current, { silent: true });
     }, WHALES_RPC_REFRESH_MS);
     return () => window.clearInterval(id);
   }, [executeWhaleRpc]);
@@ -413,6 +449,7 @@ export function WhalesPage() {
                   }
                 ),
                 sec: Math.round(WHALES_MARKET_REFRESH_MS / 1000),
+                chainSec: Math.round(WHALES_RPC_REFRESH_MS / 1000),
               })}
             </p>
           ) : null}

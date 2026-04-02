@@ -47,7 +47,7 @@
   },
   "dashboard": {
     "rows": "Rows",
-    "autoRefresh": "Auto refresh ~25s (on by default)",
+    "autoRefresh": "Auto refresh ~60s (on by default)",
     "refresh": "Refresh",
     "syncing": "Sync…",
     "updated": "Updated {{time}}",
@@ -199,7 +199,7 @@
     "title": "Whale Tracker",
     "version": "v2.0",
     "methodology": "“Whale” here means the owner of the largest SPL token account per mint (Solana RPC snapshot). Candidates merge Meme + DeFi feeds; the headline USD prefers holdings×price, else liquidity/volume heuristics. Sidebar bars are 24h up/down volume share across the list—not on-chain wallet flows.",
-    "lastSynced": "Market data last synced: {{time}} · DexScreener auto-refresh ~{{sec}}s; on-chain snapshots ~40s",
+    "lastSynced": "Market data last synced: {{time}} · DexScreener ~{{sec}}s; on-chain ~{{chainSec}}s",
     "filterMinAmount": "Min amount",
     "filterToken": "Token",
     "filterWallet": "Wallet / token",

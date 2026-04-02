@@ -178,9 +178,9 @@ export class TokenService {
     return [...byMint.values()];
   }
 
-  /** 关键词较多时分批请求，减轻瞬时 QPS（仍可能较慢） */
-  private static readonly SEARCH_BATCH_SIZE = 10;
-  private static readonly SEARCH_BATCH_GAP_MS = 100;
+  /** 关键词较多时分批请求；缩小并行、拉长间隔以降低 DexScreener 429/限流 */
+  private static readonly SEARCH_BATCH_SIZE = 4;
+  private static readonly SEARCH_BATCH_GAP_MS = 400;
 
   private static async mergeSearchQueries(
     queries: readonly string[]

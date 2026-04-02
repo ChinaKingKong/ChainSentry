@@ -16,8 +16,8 @@ import { passesFocusDashboardTokenRules } from '../lib/tokenListFilters';
 import type { Token, TokenFeedCategory } from '../types/token';
 
 const DASH_FETCH_CAP = 500;
-/** 与巨鲸页等一致：DexScreener 行情轮询间隔 */
-const DASH_MARKET_REFRESH_MS = 25_000;
+/** DexScreener 行情轮询（单次会合并多关键词 search，不宜过频） */
+const DASH_MARKET_REFRESH_MS = 60_000;
 
 export function DashboardPage() {
   const { t, i18n } = useTranslation();
