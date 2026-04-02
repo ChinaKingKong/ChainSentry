@@ -312,6 +312,7 @@
     "checkFreeze": "FREEZE_AUTH_REMOVED",
     "checkMeta": "METADATA_MUTABLE",
     "checkHolders": "TOP_HOLDERS_CONCENTRATION",
+    "checkTax": "TRANSFER_FEE (Token-2022)",
     "statusPassed": "PASSED",
     "statusWarning": "WARNING",
     "evidence1": "Sentry_0x9f…4a21",
@@ -357,7 +358,14 @@
     "ownDescPartial": "Mint or freeze authority may still exist — see checklist.",
     "liqUnknown": "—",
     "liqDescDex": "Source: DexScreener · {{dex}}",
-    "taxSplStandard": "Standard SPL mint has no built-in buy/sell tax; always verify program-specific logic."
+    "taxSplStandard": "Standard SPL mint has no built-in buy/sell tax; always verify program-specific logic.",
+    "taxHeadingPct": "{{buy}}% / {{sell}}%",
+    "taxSplLegacy": "Classic SPL Token program has no mint-level transfer-fee extension; on-chain transfer fee is 0%.",
+    "taxNoTransferFee2022": "This Token-2022 mint has no transfer-fee extension enabled; current-epoch fee is 0%.",
+    "taxTransferFeeBody": "Token-2022 transfer fee is enabled: about {{pct}}% of each SPL transfer amount, with a protocol cap of about {{max}} tokens per transfer. A typical DEX swap involves two transfers, so effective cost can feel roughly double the headline rate — confirm with the pool and route.",
+    "taxMaxUnknown": "not disclosed (see on-chain maximumFee)",
+    "taxEvidenceZero": "{{program}} · 0 bps in current epoch (no extension or disabled)",
+    "taxEvidenceActive": "~{{pct}}% · {{bps}} bps (Token-2022 transfer fee)"
   },
   "pages": {
     "whales": {

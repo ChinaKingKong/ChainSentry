@@ -5,6 +5,8 @@ import { MaterialIcon } from '../components/ui/MaterialIcon';
 import { useSentryAudit, type SentryCheckRow } from '../hooks/useSentryAudit';
 import { useTokens } from '../hooks/useTokens';
 import { formatUsdCompact } from '../lib/format';
+import { intlLocaleFor } from '../lib/intlLocale';
+import { formatRawAsDecimal } from '../services/jupiterQuote';
 import { riskToSentryScore } from '../lib/sentryScore';
 
 const CIRC = 2 * Math.PI * 45;
@@ -36,6 +38,7 @@ function rowStatusUi(
 
 export function SentryPage() {
   const { t, i18n } = useTranslation();
+  const locale = intlLocaleFor(i18n.language);
   const navigate = useNavigate();
   const gradId = useId().replace(/:/g, '');
   const {
@@ -144,6 +147,42 @@ export function SentryPage() {
       body: t('sentryPage.liqDesc'),
     };
   }, [audit, liquidityUsd, pair, t]);
+
+  const taxBlock = useMemo(() => {
+    if (!audit) {
+      return {
+        heading: t('hero.dash'),
+        body: t('sentryPage.preAnalyzeHint'),
+      };
+    }
+    const pct = (audit.transferFeeBasisPoints / 100).toLocaleString(locale, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    });
+    const heading = t('sentryPage.taxHeadingPct', { buy: pct, sell: pct });
+    if (audit.transferFeeBasisPoints === 0) {
+      return {
+        heading,
+        body:
+          audit.tokenProgram === 'spl-token'
+            ? t('sentryPage.taxSplLegacy')
+            : t('sentryPage.taxNoTransferFee2022'),
+      };
+    }
+    const maxStr =
+      audit.transferFeeMaximumRaw != null && audit.transferFeeMaximumRaw > 0n
+        ? formatRawAsDecimal(
+            audit.transferFeeMaximumRaw.toString(),
+            audit.decimals,
+            locale,
+            { fractionDigits: 6 }
+          )
+        : t('sentryPage.taxMaxUnknown');
+    return {
+      heading,
+      body: t('sentryPage.taxTransferFeeBody', { pct, max: maxStr }),
+    };
+  }, [audit, locale, t]);
 
   return (
     <div id="sentry-page-top" className="relative space-y-6">
@@ -323,13 +362,13 @@ export function SentryPage() {
                   {t('sentryPage.taxTitle')}
                 </span>
                 <h4 className="mt-1 font-headline text-2xl font-bold text-on-surface">
-                  {audit != null ? t('sentryPage.taxHeading') : t('hero.dash')}
+                  {taxBlock.heading}
                 </h4>
               </div>
               <MaterialIcon name="percent" className="text-secondary" />
             </div>
             <p className="mt-4 text-xs leading-relaxed text-on-surface-variant">
-              {audit ? t('sentryPage.taxSplStandard') : t('sentryPage.preAnalyzeHint')}
+              {taxBlock.body}
             </p>
           </div>
         </div>
@@ -392,7 +431,7 @@ export function SentryPage() {
                     </td>
                     <td className="max-w-[200px] truncate px-6 py-4 font-label text-xs opacity-60 sm:max-w-none">
                       {row.evidenceI18nKey
-                        ? t(`sentryPage.${row.evidenceI18nKey}`)
+                        ? t(`sentryPage.${row.evidenceI18nKey}`, row.evidenceParams ?? {})
                         : row.evidence}
                     </td>
                     <td className="px-6 py-4 text-right font-label text-xs text-on-surface-variant">

@@ -316,7 +316,10 @@ export function SentryScanModal({
                             </td>
                             <td className="min-w-[8rem] px-2 py-2 text-[11px] text-on-surface-variant sm:px-3 sm:py-2.5 sm:text-xs">
                               {row.evidenceI18nKey
-                                ? t(`sentryPage.${row.evidenceI18nKey}`)
+                                ? t(
+                                    `sentryPage.${row.evidenceI18nKey}`,
+                                    row.evidenceParams ?? {}
+                                  )
                                 : row.evidence}
                             </td>
                           </tr>

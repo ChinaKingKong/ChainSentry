@@ -16,6 +16,7 @@ export type SentryCheckRow = {
   status: SentryTableStatus;
   evidence: string;
   evidenceI18nKey?: string;
+  evidenceParams?: Record<string, string | number>;
   timeLabel: string;
 };
 
@@ -116,6 +117,32 @@ export function useSentryAudit() {
         status: 'warning',
         evidence: '',
         evidenceI18nKey: 'metaEvidence',
+        timeLabel,
+      },
+      {
+        id: 'tax',
+        labelKey: 'checkTax',
+        status:
+          audit.transferFeeBasisPoints === 0
+            ? 'passed'
+            : audit.transferFeeBasisPoints <= 500
+              ? 'warning'
+              : 'failed',
+        evidence: '',
+        evidenceI18nKey:
+          audit.transferFeeBasisPoints === 0
+            ? 'taxEvidenceZero'
+            : 'taxEvidenceActive',
+        evidenceParams:
+          audit.transferFeeBasisPoints === 0
+            ? {
+                program:
+                  audit.tokenProgram === 'spl-token' ? 'SPL' : 'Token-2022',
+              }
+            : {
+                pct: (audit.transferFeeBasisPoints / 100).toFixed(2),
+                bps: audit.transferFeeBasisPoints,
+              },
         timeLabel,
       },
     ];

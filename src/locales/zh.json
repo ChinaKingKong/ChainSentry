@@ -312,6 +312,7 @@
     "checkFreeze": "FREEZE_AUTH_REMOVED",
     "checkMeta": "METADATA_MUTABLE",
     "checkHolders": "TOP_HOLDERS_CONCENTRATION",
+    "checkTax": "转账税费 (Token-2022)",
     "statusPassed": "通过",
     "statusWarning": "警告",
     "evidence1": "Sentry_0x9f…4a21",
@@ -357,7 +358,14 @@
     "ownDescPartial": "冻结或铸币权限仍有一项存在，请查看检查表。",
     "liqUnknown": "—",
     "liqDescDex": "数据源：DexScreener · {{dex}}",
-    "taxSplStandard": "标准 SPL Mint 无合约内买卖税；链上未发现额外扣费逻辑（需结合具体程序验证）。"
+    "taxSplStandard": "标准 SPL Mint 无合约内买卖税；链上未发现额外扣费逻辑（需结合具体程序验证）。",
+    "taxHeadingPct": "{{buy}}% / {{sell}}%",
+    "taxSplLegacy": "经典 SPL Token 程序不支持 Mint 级转账费扩展，链上转账费率为 0%。",
+    "taxNoTransferFee2022": "该 Token-2022 Mint 未启用转账费扩展，当前纪元链上转账费为 0%。",
+    "taxTransferFeeBody": "已启用 Token-2022 转账费：每笔 SPL 转账约按金额收取 {{pct}}%，协议约定单笔上限约 {{max}} 枚。经 DEX 买卖通常各发生一次转账，体感成本可能接近费率的两倍，仍以实际池子与路由为准。",
+    "taxMaxUnknown": "未在解析结果中展示（见链上 maximumFee）",
+    "taxEvidenceZero": "{{program}} · 当前纪元 0 基点（无扩展或未启用）",
+    "taxEvidenceActive": "约 {{pct}}% · {{bps}} 基点（Token-2022 转账费）"
   },
   "pages": {
     "whales": {

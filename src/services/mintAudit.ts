@@ -1,3 +1,10 @@
+import {
+  TOKEN_2022_PROGRAM_ID,
+  TOKEN_PROGRAM_ID,
+  getEpochFee,
+  getMint,
+  getTransferFeeConfig,
+} from '@solana/spl-token';
 import { PublicKey, type ParsedAccountData } from '@solana/web3.js';
 import { getSolanaConnection } from './solanaRpc';
 
@@ -5,6 +12,8 @@ export type MintAuditOnChain = {
   mint: string;
   decimals: number;
   supplyRaw: bigint;
+  /** spl-token / spl-token-2022 */
+  tokenProgram: 'spl-token' | 'spl-token-2022';
   /** true = 铸币权限已关闭（安全） */
   mintAuthorityDisabled: boolean;
   /** true = 无冻结权限（安全） */
@@ -15,6 +24,13 @@ export type MintAuditOnChain = {
   freezeAuthorityAddress: string | null;
   /** 前 10 大持仓占总供应量比例 0–100 */
   top10HolderPct: number;
+  /**
+   * Token-2022 转账费扩展在当前纪元的费率（基点，10000=100%）；
+   * 标准 SPL 或无扩展时为 0。
+   */
+  transferFeeBasisPoints: number;
+  /** 当前纪元单笔转账费上限（最小单位）；无扩展时 null */
+  transferFeeMaximumRaw: bigint | null;
   /** Unix 秒 */
   fetchedAt: number;
 };
@@ -41,30 +57,39 @@ export async function fetchMintAuditOnChain(
 
   const data = value.data as ParsedAccountData;
   if (!SPL_MINT_PROGRAMS.has(data.program)) return null;
-  const parsed = data.parsed as {
-    type?: string;
-    info?: {
-      decimals?: number;
-      supply?: string;
-      mintAuthority?: string | null;
-      freezeAuthority?: string | null;
-    };
-  };
-  if (parsed.type !== 'mint' || !parsed.info) return null;
+  const parsed = data.parsed as { type?: string };
+  if (parsed.type !== 'mint') return null;
 
-  const info = parsed.info;
-  const decimals = info.decimals ?? 0;
-  const supplyRaw = BigInt(info.supply ?? '0');
-  const mintAuthorityAddress =
-    info.mintAuthority == null || info.mintAuthority === ''
-      ? null
-      : String(info.mintAuthority);
-  const freezeAuthorityAddress =
-    info.freezeAuthority == null || info.freezeAuthority === ''
-      ? null
-      : String(info.freezeAuthority);
+  const programId =
+    data.program === 'spl-token-2022'
+      ? TOKEN_2022_PROGRAM_ID
+      : TOKEN_PROGRAM_ID;
+  const tokenProgram: MintAuditOnChain['tokenProgram'] =
+    data.program === 'spl-token-2022' ? 'spl-token-2022' : 'spl-token';
+
+  let mintInfo;
+  try {
+    mintInfo = await getMint(conn, mintPk, undefined, programId);
+  } catch {
+    return null;
+  }
+
+  const decimals = mintInfo.decimals;
+  const supplyRaw = mintInfo.supply;
+  const mintAuthorityAddress = mintInfo.mintAuthority?.toBase58() ?? null;
+  const freezeAuthorityAddress = mintInfo.freezeAuthority?.toBase58() ?? null;
   const mintAuthorityDisabled = mintAuthorityAddress == null;
   const freezeAuthorityRemoved = freezeAuthorityAddress == null;
+
+  const { epoch } = await conn.getEpochInfo();
+  const feeCfg = getTransferFeeConfig(mintInfo);
+  let transferFeeBasisPoints = 0;
+  let transferFeeMaximumRaw: bigint | null = null;
+  if (feeCfg) {
+    const active = getEpochFee(feeCfg, BigInt(epoch));
+    transferFeeBasisPoints = active.transferFeeBasisPoints;
+    transferFeeMaximumRaw = active.maximumFee;
+  }
 
   let top10HolderPct = 0;
   if (supplyRaw > 0n) {
@@ -84,11 +109,14 @@ export async function fetchMintAuditOnChain(
     mint: mintPk.toBase58(),
     decimals,
     supplyRaw,
+    tokenProgram,
     mintAuthorityDisabled,
     freezeAuthorityRemoved,
     mintAuthorityAddress,
     freezeAuthorityAddress,
     top10HolderPct,
+    transferFeeBasisPoints,
+    transferFeeMaximumRaw,
     fetchedAt: Math.floor(Date.now() / 1000),
   };
 }
