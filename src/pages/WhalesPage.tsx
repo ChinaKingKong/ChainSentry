@@ -6,6 +6,7 @@ import { useTokens } from '../hooks/useTokens';
 import { formatUsdCompact, shortenAddress } from '../lib/format';
 import { mergeTokensByMint } from '../lib/mergeTokensByMint';
 import { TokenService } from '../services/api';
+import { fetchLatestTxForWhaleAlert } from '../services/pairActivity';
 import {
   fetchWhaleSnapshotsChunked,
   type WhaleHolderSnapshot,
@@ -88,6 +89,10 @@ export function WhalesPage() {
   const [whaleSnapshotByMint, setWhaleSnapshotByMint] = useState<
     Record<string, WhaleHolderSnapshot>
   >({});
+  /** 巨鲸钱包无最近签名时，用池/mint 最近交易补全，保证整行可打开 tx hash */
+  const [poolTxSigByMint, setPoolTxSigByMint] = useState<Record<string, string>>(
+    {}
+  );
   const [rpcHoldersReady, setRpcHoldersReady] = useState(false);
   const memeFeed = useTokens(64, false, 0, 'meme');
   const defiFeed = useTokens(64, false, 0, 'defi');
@@ -127,6 +132,7 @@ export function WhalesPage() {
   useEffect(() => {
     if (filteredAlerts.length === 0) {
       setWhaleSnapshotByMint({});
+      setPoolTxSigByMint({});
       setRpcHoldersReady(true);
       return;
     }
@@ -137,6 +143,25 @@ export function WhalesPage() {
       const map = await fetchWhaleSnapshotsChunked(mints, 4);
       if (cancelled) return;
       setWhaleSnapshotByMint(map);
+
+      const needPoolTx = filteredAlerts.filter(
+        (t) => !map[t.address]?.recentSignature
+      );
+      const sigByMint: Record<string, string> = {};
+      const CHUNK = 4;
+      for (let i = 0; i < needPoolTx.length; i += CHUNK) {
+        if (cancelled) return;
+        const slice = needPoolTx.slice(i, i + CHUNK);
+        const part = await Promise.all(
+          slice.map((tkn) => fetchLatestTxForWhaleAlert(tkn))
+        );
+        slice.forEach((tkn, j) => {
+          const sig = part[j];
+          if (sig) sigByMint[tkn.address] = sig;
+        });
+      }
+      if (cancelled) return;
+      setPoolTxSigByMint(sigByMint);
       setRpcHoldersReady(true);
     })();
     return () => {
@@ -371,20 +396,16 @@ export function WhalesPage() {
                   ? 'inflow'
                   : 'outflow';
               const icon =
-                kind === 'critical'
-                  ? 'rocket_launch'
-                  : kind === 'inflow'
-                    ? 'south_east'
-                    : 'north_east';
-              const iconFilled = kind === 'inflow' || kind === 'critical';
+                tkn.change_24h >= 0 ? 'arrow_upward' : 'arrow_downward';
+              const iconFilled = true;
               const badgeK = pickBadgeKey(kind, displayUsd, tkn.change_24h);
               const flowLine = `${tkn.symbol} · ${formatUsdCompact(tkn.liquidity)}`;
               const whaleWallet = snap?.ownerWallet ?? null;
-              const rowExplorerHref = snap?.recentSignature
-                ? TokenService.getSolscanTxUrl(snap.recentSignature)
-                : whaleWallet
-                  ? TokenService.getSolscanAccountUrl(whaleWallet)
-                  : whaleAlertSolscanFallbackUrl(tkn);
+              const txSig =
+                snap?.recentSignature ?? poolTxSigByMint[tkn.address];
+              const rowExplorerHref = txSig
+                ? TokenService.getSolscanTxUrl(txSig)
+                : whaleAlertSolscanFallbackUrl(tkn);
 
               const openRowExplorer = () => {
                 const w = window.open(rowExplorerHref, '_blank');
